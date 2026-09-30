@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multifamily Investment Screener</title>
+  <style>
+    * {
+      --text-primary: #ffffff;
+      --text-secondary: #a0aec0;
+      --text-muted: #718096;
+      --text-accent: #63b3ed;
+      --text-success: #68d391;
+      --text-warning: #f6ad55;
+      --bg-accent: rgba(99, 179, 237, 0.1);
+      --surface-1: #1a202c;
+      --surface-2: #2d3748;
+      --border: #4a5568;
+      --border-accent: #63b3ed;
+      --border-strong: #718096;
+    }
+    
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #0f1419;
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      height: fit-content;
+      position: sticky;
+      top: 0;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      border-color: var(--text-accent);
+      background: var(--bg-accent);
+      color: var(--text-accent);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-1);
+      margin-bottom: 16px;
+    }
+
+    .panel-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 12px 0;
+    }
+
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-label {
+      display: inline-block;
+      padding: 6px 12px;
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .file-label:hover {
+      border-color: var(--text-accent);
+      color: var(--text-accent);
+    }
+
+    .file-status {
+      font-size: 11px;
+      color: var(--text-success);
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    .file-status.error {
+      color: var(--text-warning);
+    }
+
+    .output-value {
+      text-align: right;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-top: 4px;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    button {
+      padding: 8px;
+      border: 0.5px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-primary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    button.active {
+      border: 1px solid var(--text-accent);
+      background: var(--bg-accent);
+      color: var(--text-accent);
+    }
+
+    button:hover {
+      border-color: var(--text-accent);
+    }
+
+    .divider {
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    .info-box {
+      background: var(--surface-2);
+      padding: 12px;
+      border-radius: 4px;
+      border-left: 2px solid var(--border-accent);
+      font-size: 10px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .controls-header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .controls-header h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .neighborhoods {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .neighborhood-card {
+      padding: 16px;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+    }
+
+    .neighborhood-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+
+    .neighborhood-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .tier-badge {
+      font-size: 11px;
+      background: var(--bg-accent);
+      color: var(--text-accent);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+      font-size: 11px;
+    }
+
+    .metric-value {
+      font-weight: 500;
+      color: var(--text-accent);
+    }
+
+    .expand-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0;
+      width: 100%;
+      text-align: left;
+      padding: 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .expand-btn:hover {
+      background: var(--surface-1);
+      color: var(--text-accent);
+    }
+
+    .expanded-content {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .expanded-content.active {
+      display: block;
+    }
+
+    .expanded-content p {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .comparison-table td {
+      padding: 8px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .comparison-table tbody tr:nth-child(odd) {
+      background: var(--surface-1);
+    }
+
+    .data-status {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 8px;
+      background: var(--surface-1);
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .data-status.loaded {
+      color: var(--text-success);
+      background: rgba(104, 211, 145, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="left-panel">
+    <div class="tab-buttons">
+      <button class="tab-btn active" onclick="switchTab('controls')">Controls</button>
+      <button class="tab-btn" onclick="switchTab('data')">Data</button>
+    </div>
+
+    <!-- CONTROLS TAB -->
+    <div id="controls-tab" class="tab-content active">
+      <div class="panel-section">
+        <h3>Your controls</h3>
+        <div class="control-group">
+          <label>Purchase price</label>
+          <input type="range" id="pp" min="900000" max="1500000" step="50000" value="1200000">
+          <div class="output-value" id="ppOut">$1.2M</div>
+        </div>
+        <div class="control-group">
+          <label>Down payment %</label>
+          <input type="range" id="dp" min="20" max="40" step="1" value="33">
+          <div class="output-value" id="dpOut">33%</div>
+        </div>
+        <div class="control-group">
+          <label>Renovation budget (% of price)</label>
+          <input type="range" id="reno" min="0" max="10" step="0.5" value="5">
+          <div class="output-value" id="renoOut">5%</div>
+        </div>
+        <div class="control-group">
+          <label>Min cap rate</label>
+          <input type="range" id="cr" min="4.0" max="7.0" step="0.1" value="5.5">
+          <div class="output-value" id="crOut">5.5%</div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Market</h3>
+        <div class="button-group">
+          <button id="mie" class="active" onclick="setMarket('IE')">Inland Empire</button>
+          <button id="msd" onclick="setMarket('SD')">San Diego</button>
+          <button id="mb" onclick="setMarket('both')">Both</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Loan structure</h3>
+        <div class="control-group">
+          <label>Interest rate (%)</label>
+          <input type="number" id="loanRate" min="4.0" max="8.0" step="0.1" value="6.5">
+        </div>
+        <div class="control-group">
+          <label>Term (years)</label>
+          <input type="number" id="loanTerm" min="15" max="30" step="1" value="30">
+        </div>
+        <div style="background: var(--surface-2); padding: 8px; border-radius: 4px; border: 0.5px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-size: 11px; color: var(--text-secondary);">Loan amount</span>
+            <span id="loanAmt" style="font-weight: 600; color: var(--text-accent); font-size: 12px;">$804K</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 11px; color: var(--text-secondary);">Monthly PITI</span>
+            <span id="monthlyPITI" style="font-weight: 600; color: var(--text-accent); font-size: 12px;">$4.8K</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Your capital needed</h3>
+        <div style="background: var(--surface-2); padding: 12px; border-radius: 6px; border: 0.5px solid var(--border);">
+          <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Down payment</span><span id="c1" style="font-weight: 500; color: var(--text-primary);">$396K</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Closing costs (2.5%)</span><span id="c2" style="font-weight: 500; color: var(--text-primary);">$30K</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Renovation</span><span id="c3" style="font-weight: 500; color: var(--text-primary);">$60K</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">6-month reserve</span><span id="c4" style="font-weight: 500; color: var(--text-primary);">$28K</span></div>
+          </div>
+          <div style="border-top: 1px solid var(--border); padding-top: 8px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: var(--text-secondary); font-weight: 500;">Total needed</span><span id="cTotal" style="font-weight: 600; color: var(--text-accent); font-size: 13px;">$514K</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary); font-weight: 500;">Pool: $550K</span><span id="cRemain" style="font-weight: 600; color: var(--text-success); font-size: 13px;">$36K left</span></div>
+          </div>
+        </div>
+        <div class="info-box" style="margin-top: 8px;">
+          6-month reserve = monthly (rent + OpEx). Lender will verify reserves on loan approval.
+        </div>
+      </div>
+    </div>
+
+    <!-- DATA TAB -->
+    <div id="data-tab" class="tab-content">
+      <div class="panel-section">
+        <h3>Import market data</h3>
+        <div class="control-group">
+          <label>Zillow ZORI CSV</label>
+          <input type="file" id="zillowFile" accept=".csv" onchange="handleZillowFile(event)">
+          <label for="zillowFile" class="file-label">Choose file</label>
+          <div class="file-status" id="zillowStatus"></div>
+        </div>
+        <div class="control-group">
+          <label>Apartment List Growth CSV</label>
+          <input type="file" id="apartmentFile" accept=".csv" onchange="handleApartmentFile(event)">
+          <label for="apartmentFile" class="file-label">Choose file</label>
+          <div class="file-status" id="apartmentStatus"></div>
+        </div>
+        <div class="control-group">
+          <label>Apartment List Vacancy CSV</label>
+          <input type="file" id="vacancyFile" accept=".csv" onchange="handleVacancyFile(event)">
+          <label for="vacancyFile" class="file-label">Choose file</label>
+          <div class="file-status" id="vacancyStatus"></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Data status</h3>
+        <div id="dataStatus" class="data-status">
+          No data imported
+        </div>
+        <button onclick="clearAllData()" style="width: 100%; margin-top: 8px;">Clear all data</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>Instructions</h3>
+        <div class="info-box">
+          <strong>Step 1:</strong> Download Zillow ZORI, Apartment List Growth, and Apartment List Vacancy CSVs.<br><br>
+          <strong>Step 2:</strong> Upload all files here.<br><br>
+          <strong>Step 3:</strong> Your neighborhoods will update with current market data shown as "Current" values.<br><br>
+          <strong>Step 4:</strong> Right-click any neighborhood card to ask Claude questions about it.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="controls-header">
+      <h2>Investment cases</h2>
+      <button id="dbtn" class="active" onclick="showDetail()" style="width: 60px; padding: 6px 12px;">Detail</button>
+      <button id="cbtn" onclick="showCompare()" style="width: 60px; padding: 6px 12px;">Compare</button>
+    </div>
+    <div id="detail"></div>
+    <div id="compare" style="display: none; overflow-x: auto;"></div>
+  </div>
+
+  <!-- CHAT SIDEBAR -->
+  <div id="chatSidebar" style="display: none; position: fixed; right: 0; top: 0; width: 380px; height: 100vh; background: var(--surface-1); border-left: 1px solid var(--border); z-index: 1000; flex-direction: column;">
+    <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Ask Claude</h3>
+      <button onclick="closeChatSidebar()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+    </div>
+    <div id="chatMessages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;"></div>
+    <div style="padding: 16px; border-top: 1px solid var(--border);">
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="text" id="chatInput" placeholder="Ask about this neighborhood..." style="flex: 1; padding: 8px; border: 0.5px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-primary); font-size: 12px;">
+        <button onclick="sendChatMessage()" style="padding: 8px 12px; background: var(--text-accent); color: #0f1419; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">Send</button>
+      </div>
+      <div id="contextInfo" style="font-size: 11px; color: var(--text-muted); background: var(--surface-2); padding: 8px; border-radius: 4px; border-left: 2px solid var(--border-accent);"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const neighborhoods = [
+  {
+    name: "Moreno Valley",
+    market: "IE",
+    capMin: 6.5,
+    capMax: 7.0,
+    rent: "$1,400–$1,650/2BR",
+    avgRent: 1525,
+    rentGrowth: "+2.2% YoY",
+    vacancy: "4.9%",
+    jobGrowth: "+1.8% YoY",
+    tier: 1,
+    opexRatio: 0.35,
+    opexNotes: "Older stock (1980s–2000s), moderate CA taxes, logistics-area labor costs, standard vacancy risk",
+    whyDetail: "Moreno Valley is the highest-cap-rate corridor in Inland Empire because it sits in the sweet spot of supply constraints and working-class demand stability. The neighborhood has experienced consistent 1.8% job growth YoY primarily from logistics and warehouse expansion along I-215, which is a structural tailwind that won't reverse. Rents run $1,400–$1,650/2BR—40–50 bps below Orange County and 10–15% below San Diego—which creates natural demand from cost-conscious renters. Vacancy sits at 4.9%, suggesting healthy but not speculative demand. The reason cap rates hit 6.8%+ is straightforward: institutional capital is overweighting San Diego and Orange County, leaving Moreno Valley at a 100bps discount. This is your margin of safety. With $400K capital, buying a 6.8%+ cap deal here leaves you $150K+ in post-close reserves. That matters when the first tenant-vacated maintenance hits in year 2.",
+    reasoning: "Your $400K capital demands margin of safety. 6.8%+ cap leaves $150K+ post-close reserves.",
+    target: "8-unit, $1.2–$1.4M, 6.7%+ cap",
+    tradeoff: "Slower rent growth (2–3% vs 4–5% SD) means longer value-add horizon.",
+    sources: ["NorthMarq Q1 2026", "Apartments.com June 2026", "CoStar data"]
+  },
+  {
+    name: "East Riverside",
+    market: "IE",
+    capMin: 6.2,
+    capMax: 6.8,
+    rent: "$1,500–$1,750/2BR",
+    avgRent: 1625,
+    rentGrowth: "+2.8% YoY",
+    vacancy: "4.2%",
+    jobGrowth: "+2.1% YoY",
+    tier: 2,
+    opexRatio: 0.33,
+    opexNotes: "Mixed property ages, tight vacancy (lower vacancy allowance), moderate CA taxes, tech-corridor growth reducing maintenance aging curve",
+    whyDetail: "East Riverside (Linden area) is emerging as the tech-lite corridor of Inland Empire. Unlike Moreno Valley's logistics base, Riverside is attracting software/engineering roles tied to remote work and light manufacturing. Job growth runs 2.1% YoY—90bps higher than Moreno Valley—and the trend is accelerating. Rents are $1,500–$1,750/2BR, a $100–150 premium over Moreno Valley, which signals a qualitatively different tenant profile. Vacancy at 4.2% is tight—tighter than Moreno Valley—indicating supply constraints starting to bite. Cap rates run 6.4–6.8%, which is 40–60bps lower than Moreno Valley but still achievable on the right deal.",
+    reasoning: "Sweet spot between cap rate and growth. Rent growth accelerates 1–2% above IE average.",
+    target: "6–8 unit, $1.15–$1.35M, 6.4%+ cap",
+    tradeoff: "100bps lower than Moreno Valley caps.",
+    sources: ["NorthMarq Q1 2026", "Lee & Associates Q2 2026"]
+  },
+  {
+    name: "Escondido – Central",
+    market: "SD",
+    capMin: 5.9,
+    capMax: 6.4,
+    rent: "$1,550–$1,850/2BR",
+    avgRent: 1700,
+    rentGrowth: "+3.8% YoY",
+    vacancy: "5.6%",
+    jobGrowth: "+2.3% YoY",
+    tier: 3,
+    opexRatio: 0.32,
+    opexNotes: "Newer stock (2005+), higher CA property taxes (SD), higher labor costs, stable tenants lower vacancy impact, tech-hub quality reduces aging burden",
+    whyDetail: "Escondido Central is the highest-velocity rent-growth market in North County San Diego, driven by spillover from the Tesla Gigafactory in neighboring Carlsbad and aerospace/defense consolidation. Job growth runs 2.3% YoY but is biased toward high-wage roles ($70K–$120K), which means tenant quality improves faster than in Inland Empire. Rents have hit $1,550–$1,850/2BR and are growing at 3.8% YoY—double the Inland Empire rate.",
+    reasoning: "Higher price compresses reserves to $50–100K. Justified if 5-year exit is priority.",
+    target: "8-unit, $1.25–$1.45M, 6.2%+ cap",
+    tradeoff: "Requires clean ops, tight early margins.",
+    sources: ["Lee & Associates Q2 2026", "CBRE Q2 2026"]
+  },
+  {
+    name: "Vista – North County",
+    market: "SD",
+    capMin: 5.8,
+    capMax: 6.3,
+    rent: "$1,600–$1,900/2BR",
+    avgRent: 1750,
+    rentGrowth: "+3.2% YoY",
+    vacancy: "5.6%",
+    jobGrowth: "+2.0% YoY",
+    tier: 4,
+    opexRatio: 0.32,
+    opexNotes: "Moderate property ages, military stability reduces vacancy allowance significantly, higher CA taxes, lower labor churn = lower maintenance peaks",
+    whyDetail: "Vista is a stability play, not a growth play. Its primary economic driver is Camp Pendleton (5 miles north), which generates stable, non-cyclical demand from military families.",
+    reasoning: "Stability over appreciation. Cap floor 5.8%—barely works. Pick only if all other boxes check.",
+    target: "6-unit, $1.1–$1.3M, 6.1%+ cap",
+    tradeoff: "Lower rent ceiling limits upside.",
+    sources: ["Lee & Associates Q2 2026"]
+  },
+  {
+    name: "Victorville",
+    market: "IE",
+    capMin: 6.8,
+    capMax: 7.2,
+    rent: "$1,200–$1,450/2BR",
+    avgRent: 1325,
+    rentGrowth: "+1.5% YoY",
+    vacancy: "5.1%",
+    jobGrowth: "+1.3% YoY",
+    tier: 5,
+    opexRatio: 0.39,
+    opexNotes: "Oldest stock (1970s–1990s), highest maintenance burden, remote location increases service costs, military base stability reduces vacancy but aging systems require more capex reserves",
+    whyDetail: "Victorville is the ultimate capital-preservation play. Cap rates run 6.8–7.2%—highest in your search area—because institutional investors see limited upside and meaningful downside risk.",
+    reasoning: "Pure safety play. Insulates from downturns. BUT: Low rent ceiling makes 5-year exit difficult.",
+    target: "4–5 unit, $900K–$1.1M, 7%+ cap",
+    tradeoff: "Slowest growth, hardest exit.",
+    sources: ["NorthMarq Q4 2025", "CoStar data"]
+  }
+];
+
+const TOTAL_CAPITAL = 550000;
+const CLOSING_COST_RATE = 0.025;
+
+let currentMarket = "IE", currentMinCap = 5.5, currentView = "detail";
+let importedData = { zillow: null, apartment: null, vacancy: null };
+let currentContextNeighborhood = null;
+let chatMessages = [];
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(tab + '-tab').classList.add('active');
+  event.target.classList.add('active');
+}
+
+function calculateMonthlyPayment(principal, annualRate, months) {
+  const monthlyRate = annualRate / 12;
+  if (monthlyRate === 0) return principal / months;
+  return principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+}
+
+function calculateReserve(avgRent, numUnits, opexRatio, occupancy = 0.90) {
+  const monthlyRent = avgRent * numUnits * occupancy;
+  const monthlyOpex = monthlyRent * opexRatio;
+  return monthlyRent + monthlyOpex;
+}
+
+function updateCalcs() {
+  const pp = parseInt(document.getElementById("pp").value);
+  const dp = parseInt(document.getElementById("dp").value);
+  const reno = parseFloat(document.getElementById("reno").value);
+  const cr = parseFloat(document.getElementById("cr").value);
+  const loanRate = parseFloat(document.getElementById("loanRate").value);
+  const loanTerm = parseInt(document.getElementById("loanTerm").value);
+  
+  document.getElementById("ppOut").textContent = "$" + (pp/1e6).toFixed(1) + "M";
+  document.getElementById("dpOut").textContent = dp + "%";
+  document.getElementById("crOut").textContent = cr.toFixed(1) + "%";
+  document.getElementById("renoOut").textContent = reno + "%";
+  
+  const downPayment = Math.round(pp * dp / 100 / 1000) * 1000;
+  const loanAmount = pp - downPayment;
+  const closingCosts = Math.round(pp * CLOSING_COST_RATE);
+  const renovationBudget = Math.round(pp * reno / 100);
+  
+  const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate / 100, loanTerm * 12);
+  
+  document.getElementById("loanAmt").textContent = "$" + (loanAmount/1000).toFixed(0) + "K";
+  document.getElementById("monthlyPITI").textContent = "$" + (monthlyPayment/1000).toFixed(1) + "K";
+  
+  const filtered = neighborhoods.filter(n => {
+    const mok = currentMarket === "both" || n.market === currentMarket;
+    return mok;
+  });
+  
+  let avgRentInMarket = 1525;
+  let avgOpexInMarket = 0.35;
+  if (filtered.length > 0) {
+    avgRentInMarket = filtered.reduce((sum, n) => sum + n.avgRent, 0) / filtered.length;
+    avgOpexInMarket = filtered.reduce((sum, n) => sum + n.opexRatio, 0) / filtered.length;
+  }
+  
+  const estimatedUnits = Math.max(4, Math.round(pp / 150000));
+  const monthlyReserveBase = calculateReserve(avgRentInMarket, estimatedUnits, avgOpexInMarket);
+  const sixMonthReserve = monthlyReserveBase * 6;
+  
+  const totalNeeded = downPayment + closingCosts + renovationBudget + sixMonthReserve;
+  const remaining = TOTAL_CAPITAL - totalNeeded;
+  
+  document.getElementById("c1").textContent = "$" + (downPayment/1000).toFixed(0) + "K";
+  document.getElementById("c2").textContent = "$" + (closingCosts/1000).toFixed(0) + "K";
+  document.getElementById("c3").textContent = "$" + (renovationBudget/1000).toFixed(0) + "K";
+  document.getElementById("c4").textContent = "$" + (sixMonthReserve/1000).toFixed(0) + "K";
+  document.getElementById("cTotal").textContent = "$" + (totalNeeded/1000).toFixed(0) + "K";
+  
+  if (remaining >= 0) {
+    document.getElementById("cRemain").textContent = "$" + (remaining/1000).toFixed(0) + "K left";
+    document.getElementById("cRemain").style.color = "var(--text-success)";
+  } else {
+    document.getElementById("cRemain").textContent = "$" + (remaining/1000).toFixed(0) + "K over";
+    document.getElementById("cRemain").style.color = "var(--text-warning)";
+  }
+  
+  currentMinCap = cr;
+  saveState();
+  refreshData();
+}
+
+function setMarket(m) {
+  currentMarket = m;
+  document.getElementById("mie").classList.toggle("active", m === "IE");
+  document.getElementById("msd").classList.toggle("active", m === "SD");
+  document.getElementById("mb").classList.toggle("active", m === "both");
+  updateCalcs();
+}
+
+function handleZillowFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = csv.split('\n');
+      const header = lines[0].split(',');
+      
+      // Extract metro data: RegionName and all monthly values
+      const data = {};
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = lines[i].split(',');
+        const regionName = values[2].replace(/"/g, '').trim();
+        const regionType = values[3].replace(/"/g, '').trim();
+        
+        // Only get MSA (metro) level data
+        if (regionType === 'msa') {
+          // Store all monthly values starting from column 5
+          const monthlyValues = [];
+          for (let j = 5; j < values.length; j++) {
+            const val = parseFloat(values[j]);
+            if (!isNaN(val)) monthlyValues.push(val);
+          }
+          if (monthlyValues.length > 0) {
+            data[regionName] = monthlyValues;
+          }
+        }
+      }
+      
+      importedData.zillow = data;
+      saveState();
+      document.getElementById("zillowStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("zillowStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+    } catch (err) {
+      document.getElementById("zillowStatus").textContent = "❌ Parse error";
+      document.getElementById("zillowStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleApartmentFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = csv.split('\n');
+      const header = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      const data = {};
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const locName = values[0];
+        const locType = values[1];
+        
+        if (locType === 'Metro') {
+          // Store all monthly values starting from column 7 onwards
+          const monthlyValues = [];
+          for (let j = 7; j < values.length; j++) {
+            const val = parseFloat(values[j]);
+            if (!isNaN(val)) monthlyValues.push(val * 100); // Convert to percentage
+          }
+          if (monthlyValues.length > 0) {
+            data[locName] = monthlyValues;
+          }
+        }
+      }
+      
+      importedData.apartment = data;
+      saveState();
+      document.getElementById("apartmentStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("apartmentStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+    } catch (err) {
+      document.getElementById("apartmentStatus").textContent = "❌ Parse error";
+      document.getElementById("apartmentStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function updateDataStatus() {
+  const status = document.getElementById("dataStatus");
+  const zLoaded = importedData.zillow ? Object.keys(importedData.zillow).length : 0;
+  const aLoaded = importedData.apartment ? Object.keys(importedData.apartment).length : 0;
+  const vLoaded = importedData.vacancy ? Object.keys(importedData.vacancy).length : 0;
+  
+  if (zLoaded > 0 || aLoaded > 0 || vLoaded > 0) {
+    status.innerHTML = `✓ <strong>Data imported:</strong><br>Zillow: ${zLoaded} metros<br>Growth: ${aLoaded} metros<br>Vacancy: ${vLoaded} metros`;
+    status.classList.add("loaded");
+  } else {
+    status.innerHTML = "No data imported";
+    status.classList.remove("loaded");
+  }
+}
+
+function clearAllData() {
+  if (confirm("Clear all imported data?")) {
+    importedData = { zillow: null, apartment: null, vacancy: null };
+    document.getElementById("zillowFile").value = "";
+    document.getElementById("apartmentFile").value = "";
+    document.getElementById("vacancyFile").value = "";
+    document.getElementById("zillowStatus").textContent = "";
+    document.getElementById("zillowStatus").classList.remove("loaded");
+    document.getElementById("apartmentStatus").textContent = "";
+    document.getElementById("apartmentStatus").classList.remove("loaded");
+    document.getElementById("vacancyStatus").textContent = "";
+    document.getElementById("vacancyStatus").classList.remove("loaded");
+    updateDataStatus();
+    saveState();
+    refreshData();
+  }
+}
+
+function showDetail() {
+  currentView = "detail";
+  document.getElementById("dbtn").classList.add("active");
+  document.getElementById("cbtn").classList.remove("active");
+  document.getElementById("detail").style.display = "flex";
+  document.getElementById("compare").style.display = "none";
+  refreshData();
+}
+
+function showCompare() {
+  currentView = "compare";
+  document.getElementById("cbtn").classList.add("active");
+  document.getElementById("dbtn").classList.remove("active");
+  document.getElementById("detail").style.display = "none";
+  document.getElementById("compare").style.display = "block";
+  refreshData();
+}
+
+function matchMetroToNeighborhood(neighborhood) {
+  // Mapping of neighborhoods to metro area names in the CSVs
+  // Note: Zillow uses short names, Apartment List uses long names
+  const metroMap = {
+    "Moreno Valley": {
+      zillow: "Riverside, CA",
+      apartment: "Riverside-San Bernardino-Ontario, CA"
+    },
+    "East Riverside": {
+      zillow: "Riverside, CA",
+      apartment: "Riverside-San Bernardino-Ontario, CA"
+    },
+    "Victorville": {
+      zillow: "Victorville, CA",
+      apartment: "Victorville-Hesperia-Apple Valley, CA"
+    },
+    "Escondido – Central": {
+      zillow: "San Diego, CA",
+      apartment: "San Diego-Chula Vista-Carlsbad, CA"
+    },
+    "Vista – North County": {
+      zillow: "San Diego, CA",
+      apartment: "San Diego-Chula Vista-Carlsbad, CA"
+    }
+  };
+  
+  return metroMap[neighborhood.name] || { zillow: neighborhood.name, apartment: neighborhood.name };
+}
+
+function handleVacancyFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = csv.split('\n');
+      const header = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      
+      const data = {};
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const locName = values[0];
+        const locType = values[1];
+        
+        if (locType === 'Metro') {
+          // Store all monthly values starting from column 7 onwards
+          const monthlyValues = [];
+          for (let j = 7; j < values.length; j++) {
+            const val = parseFloat(values[j]);
+            if (!isNaN(val)) monthlyValues.push(val * 100); // Convert to percentage
+          }
+          if (monthlyValues.length > 0) {
+            data[locName] = monthlyValues;
+          }
+        }
+      }
+      
+      importedData.vacancy = data;
+      saveState();
+      document.getElementById("vacancyStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("vacancyStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+    } catch (err) {
+      document.getElementById("vacancyStatus").textContent = "❌ Parse error";
+      document.getElementById("vacancyStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function getVacancyForNeighborhood(neighborhood) {
+  const metros = matchMetroToNeighborhood(neighborhood);
+  if (importedData.vacancy && metros.apartment && importedData.vacancy[metros.apartment]) {
+    const values = importedData.vacancy[metros.apartment];
+    if (Array.isArray(values) && values.length > 0) {
+      return (values[values.length - 1]).toFixed(1) + "%";
+    }
+  }
+  return neighborhood.vacancy; // Fallback to default percentage string
+}
+
+function getMetroRentCurrent(metros) {
+  if (importedData.zillow && metros.zillow && importedData.zillow[metros.zillow]) {
+    const values = importedData.zillow[metros.zillow];
+    if (Array.isArray(values) && values.length > 0) {
+      return values[values.length - 1];
+    }
+  }
+  return null;
+}
+
+function getMetroRentYoYMedian(metros) {
+  if (importedData.zillow && metros.zillow && importedData.zillow[metros.zillow]) {
+    const values = importedData.zillow[metros.zillow];
+    if (Array.isArray(values) && values.length >= 24) {
+      const current12 = values.slice(-12);
+      const prior12 = values.slice(-24, -12);
+      const currentMedian = calculateMedian(current12);
+      const priorMedian = calculateMedian(prior12);
+      return { current: currentMedian, prior: priorMedian };
+    }
+  }
+  return null;
+}
+
+function getMetroGrowthCurrent(metros) {
+  if (importedData.apartment && metros.apartment && importedData.apartment[metros.apartment]) {
+    const values = importedData.apartment[metros.apartment];
+    if (Array.isArray(values) && values.length > 0) {
+      return values[values.length - 1];
+    }
+  }
+  return null;
+}
+
+function getMetroGrowthYoYMedian(metros) {
+  if (importedData.apartment && metros.apartment && importedData.apartment[metros.apartment]) {
+    const values = importedData.apartment[metros.apartment];
+    if (Array.isArray(values) && values.length >= 24) {
+      const current12 = values.slice(-12);
+      const prior12 = values.slice(-24, -12);
+      const currentMedian = calculateMedian(current12);
+      const priorMedian = calculateMedian(prior12);
+      return { current: currentMedian, prior: priorMedian };
+    }
+  }
+  return null;
+}
+
+function getMetroVacancyYoYMedian(metros) {
+  if (importedData.vacancy && metros.apartment && importedData.vacancy[metros.apartment]) {
+    const values = importedData.vacancy[metros.apartment];
+    if (Array.isArray(values) && values.length >= 24) {
+      const current12 = values.slice(-12);
+      const prior12 = values.slice(-24, -12);
+      const currentMedian = calculateMedian(current12);
+      const priorMedian = calculateMedian(prior12);
+      return { current: currentMedian, prior: priorMedian };
+    }
+  }
+  return null;
+}
+
+function openChatForContext(neighborhood) {
+  currentContextNeighborhood = neighborhood;
+  document.getElementById("chatSidebar").style.display = "flex";
+  chatMessages = [];
+  document.getElementById("chatMessages").innerHTML = '';
+  
+  const metros = matchMetroToNeighborhood(neighborhood);
+  let contextStr = `Analyzing: ${neighborhood.name} (Tier ${neighborhood.tier})`;
+  if (metros.apartment) {
+    contextStr += `\nMetro: ${metros.apartment}`;
+  }
+  document.getElementById("contextInfo").textContent = contextStr;
+  
+  document.getElementById("chatInput").focus();
+}
+
+function closeChatSidebar() {
+  document.getElementById("chatSidebar").style.display = "none";
+  currentContextNeighborhood = null;
+  chatMessages = [];
+}
+
+function buildContextPrompt() {
+  if (!currentContextNeighborhood) return "";
+  
+  const n = currentContextNeighborhood;
+  const metros = matchMetroToNeighborhood(n);
+  let currentRent = n.rent;
+  let currentGrowth = n.rentGrowth;
+  let currentVacancy = getVacancyForNeighborhood(n);
+  
+  if (importedData.zillow && metros.zillow && importedData.zillow[metros.zillow]) {
+    currentRent = `$${importedData.zillow[metros.zillow].toFixed(0)}/mo`;
+  }
+  if (importedData.apartment && metros.apartment && importedData.apartment[metros.apartment]) {
+    currentGrowth = `${importedData.apartment[metros.apartment].toFixed(2)}% MoM`;
+  }
+  
+  // Get current calculator values
+  const pp = parseInt(document.getElementById("pp").value);
+  const dp = parseInt(document.getElementById("dp").value);
+  const reno = parseFloat(document.getElementById("reno").value);
+  
+  return `Current investment context:
+- Neighborhood: ${n.name} (Tier ${n.tier})
+- Market: ${n.market}
+- Cap rate range: ${n.capMin}–${n.capMax}%
+- Current rent: ${currentRent}
+- Rent growth: ${currentGrowth}
+- Vacancy: ${currentVacancy}
+- OpEx ratio: ${(n.opexRatio * 100).toFixed(0)}%
+- Job growth: ${n.jobGrowth}
+
+Your calculator settings:
+- Purchase price: $${(pp/1e6).toFixed(1)}M
+- Down payment: ${dp}%
+- Renovation budget: ${reno}%`;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById("chatInput").value.trim();
+  if (!input) return;
+  
+  // Add user message to chat
+  chatMessages.push({ role: "user", content: input });
+  addChatMessageUI("user", input);
+  document.getElementById("chatInput").value = "";
+  
+  // Show loading state
+  addChatMessageUI("assistant", "Thinking...");
+  
+  try {
+    const contextPrompt = buildContextPrompt();
+    const systemPrompt = `You are a real estate investment analyst helping evaluate multifamily properties in Southern California. You have deep knowledge of cap rates, market dynamics, operating expenses, and investment thesis development. Be direct, practical, and grounded in production reality. Focus on what matters for this specific deal, not generic advice.
+
+${contextPrompt}
+
+User query: ${input}
+
+Provide a concise, actionable response. If you need clarification on any assumptions, ask directly.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-20250805",
+        max_tokens: 800,
+        messages: [
+          { role: "user", content: systemPrompt }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      addChatMessageUI("assistant", `❌ Error: ${errorData.error?.message || "API error"}`);
+      return;
+    }
+
+    const data = await response.json();
+    const assistantMessage = data.content[0].text;
+    
+    // Replace the "Thinking..." message
+    chatMessages[chatMessages.length - 1] = { role: "assistant", content: assistantMessage };
+    const messagesDiv = document.getElementById("chatMessages");
+    messagesDiv.removeChild(messagesDiv.lastChild);
+    addChatMessageUI("assistant", assistantMessage);
+    
+  } catch (err) {
+    addChatMessageUI("assistant", `❌ Error: ${err.message}`);
+  }
+}
+
+function addChatMessageUI(role, text) {
+  const messagesDiv = document.getElementById("chatMessages");
+  const msgEl = document.createElement("div");
+  msgEl.style.cssText = `
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 100%;
+    word-wrap: break-word;
+  `;
+  
+  if (role === "user") {
+    msgEl.style.cssText += `
+      background: var(--bg-accent);
+      color: var(--text-accent);
+      text-align: right;
+    `;
+  } else {
+    msgEl.style.cssText += `
+      background: var(--surface-2);
+      color: var(--text-secondary);
+    `;
+  }
+  
+  msgEl.textContent = text;
+  messagesDiv.appendChild(msgEl);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function setupContextMenu() {
+  document.addEventListener('contextmenu', (e) => {
+    // Only capture right-click on neighborhood cards
+    let card = e.target.closest('.neighborhood-card');
+    if (!card) return;
+    
+    e.preventDefault();
+    
+    // Find which neighborhood this is
+    const nameEl = card.querySelector('.neighborhood-name');
+    if (!nameEl) return;
+    
+    const neighborhoodName = nameEl.textContent.trim();
+    const neighborhood = neighborhoods.find(n => n.name === neighborhoodName);
+    if (!neighborhood) return;
+    
+    openChatForContext(neighborhood);
+  });
+}
+
+function linearRegression(points) {
+  // points: array of {x, y} values
+  // returns {m, b} for y = mx + b
+  if (points.length < 2) return null;
+  
+  const n = points.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  
+  for (let p of points) {
+    sumX += p.x;
+    sumY += p.y;
+    sumXY += p.x * p.y;
+    sumX2 += p.x * p.x;
+  }
+  
+  const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const b = (sumY - m * sumX) / n;
+  
+  return {m, b};
+}
+
+function forecastLinear(values, forecastMonths = 12) {
+  // values: array of numbers (historical)
+  // returns: {historical: [...], forecast: [...], all: [...]}
+  if (values.length < 2) return null;
+  
+  // Get last 60 months (5 years)
+  const historical = values.slice(-60);
+  
+  // Create points for regression (x: month index, y: value)
+  const points = historical.map((val, idx) => ({x: idx, y: val}));
+  const fit = linearRegression(points);
+  if (!fit) return null;
+  
+  // Forecast next 12 months
+  const forecast = [];
+  for (let i = 0; i < forecastMonths; i++) {
+    const x = historical.length + i;
+    const y = fit.m * x + fit.b;
+    forecast.push(Math.max(0, y)); // Clamp to 0 minimum
+  }
+  
+  return {
+    historical: historical,
+    forecast: forecast,
+    fit: fit,
+    all: [...historical, ...forecast]
+  };
+}
+
+function renderMiniChart(data, label, unit, width = 280, height = 80) {
+  // data: {historical, forecast, all}
+  // Renders SVG line chart with historical + forecast
+  if (!data || !data.all || data.all.length === 0) return '';
+  
+  const padding = 20;
+  const chartWidth = width - 2 * padding;
+  const chartHeight = height - 2 * padding;
+  
+  const minVal = Math.min(...data.all);
+  const maxVal = Math.max(...data.all);
+  const range = maxVal - minVal || 1;
+  
+  // Scale functions
+  const scaleX = (idx) => padding + (idx / (data.all.length - 1)) * chartWidth;
+  const scaleY = (val) => height - padding - ((val - minVal) / range) * chartHeight;
+  
+  // Build historical line path
+  let historicalPath = '';
+  for (let i = 0; i < data.historical.length; i++) {
+    const x = scaleX(i);
+    const y = scaleY(data.historical[i]);
+    historicalPath += (i === 0 ? 'M' : 'L') + x + ',' + y;
+  }
+  
+  // Build forecast line path (dashed)
+  let forecastPath = '';
+  const splitIdx = data.historical.length;
+  for (let i = 0; i < data.forecast.length; i++) {
+    const x = scaleX(splitIdx + i);
+    const y = scaleY(data.forecast[i]);
+    forecastPath += (i === 0 ? 'M' : 'L') + x + ',' + y;
+  }
+  
+  // SVG
+  let svg = `<svg width="${width}" height="${height}" style="display: block; margin: 0 auto;">
+    <style>
+      .chart-line { fill: none; stroke-width: 1.5; }
+      .chart-hist { stroke: var(--text-accent); }
+      .chart-forecast { stroke: var(--text-warning); stroke-dasharray: 4,2; }
+      .chart-label { font-size: 11px; fill: var(--text-muted); }
+      .chart-grid { stroke: var(--border); opacity: 0.3; }
+    </style>
+    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="chart-grid" />
+    <path d="${historicalPath}" class="chart-line chart-hist" />
+    <path d="${forecastPath}" class="chart-line chart-forecast" />
+    <text x="${padding}" y="14" class="chart-label">${label}</text>
+    <text x="${width - padding - 30}" y="14" class="chart-label">${unit}</text>
+  </svg>`;
+  
+  return svg;
+}
+
+function getMetroChartData(metros) {
+  // Returns {rent, growth, vacancy} with forecast data
+  const data = {};
+  
+  // Rent
+  if (importedData.zillow && metros.zillow && importedData.zillow[metros.zillow]) {
+    const values = importedData.zillow[metros.zillow];
+    if (Array.isArray(values)) {
+      data.rent = forecastLinear(values, 12);
+    }
+  }
+  
+  // Growth
+  if (importedData.apartment && metros.apartment && importedData.apartment[metros.apartment]) {
+    const values = importedData.apartment[metros.apartment];
+    if (Array.isArray(values)) {
+      data.growth = forecastLinear(values, 12);
+    }
+  }
+  
+  // Vacancy
+  if (importedData.vacancy && metros.apartment && importedData.vacancy[metros.apartment]) {
+    const values = importedData.vacancy[metros.apartment];
+    if (Array.isArray(values)) {
+      data.vacancy = forecastLinear(values, 12);
+    }
+  }
+  
+  return data;
+}
+
+function getYoYTrending() {
+  // Returns YoY trending data for each metro
+  // Reads raw CSV data to calculate 12-month medians
+  const trending = {};
+  
+  // This would parse the full CSV line data
+  // For now, returning placeholder structure
+  return trending;
+}
+
+function calculateMedian(arr) {
+  if (arr.length === 0) return 0;
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function formatTrendIndicator(current, previous, isInverse = false) {
+  if (!previous || previous === 0) return "—";
+  const change = ((current - previous) / Math.abs(previous)) * 100;
+  const arrow = (change > 0 && !isInverse) || (change < 0 && isInverse) ? '↑' : '↓';
+  const color = (change > 0 && !isInverse) || (change < 0 && isInverse) ? 'var(--text-success)' : 'var(--text-warning)';
+  return `<span style="color: ${color};">${arrow} ${Math.abs(change).toFixed(1)}%</span>`;
+}
+
+function refreshData() {
+  const filtered = neighborhoods.filter(n => {
+    const mok = currentMarket === "both" || n.market === currentMarket;
+    const cok = n.capMin >= currentMinCap;
+    return mok && cok;
+  }).sort((a, b) => a.tier - b.tier);
+
+  if (currentView === "detail") {
+    if (filtered.length === 0) {
+      document.getElementById("detail").innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">No matches. Adjust filters.</div>';
+      return;
+    }
+    let html = '';
+    for (let c of filtered) {
+      const metros = matchMetroToNeighborhood(c);
+      let rentDisplay = c.rent;
+      let rentGrowthDisplay = c.rentGrowth;
+      
+      // Override with imported data if available
+      const rentCurrent = getMetroRentCurrent(metros);
+      if (rentCurrent) {
+        rentDisplay = `$${rentCurrent.toFixed(0)}/mo (Current)`;
+      }
+      const growthCurrent = getMetroGrowthCurrent(metros);
+      if (growthCurrent !== null) {
+        rentGrowthDisplay = `${growthCurrent.toFixed(2)}% MoM (Current)`;
+      }
+      
+      html += '<div class="neighborhood-card"><div class="neighborhood-header"><div class="neighborhood-name">' + c.name + '</div><div class="tier-badge">Tier ' + c.tier + '</div></div>';
+      html += '<div class="metrics-grid"><div class="metric"><div class="metric-label">Cap rate</div><div class="metric-value">' + c.capMin + '–' + c.capMax + '%</div></div><div class="metric"><div class="metric-label">Rent</div><div class="metric-value">' + rentDisplay + '</div></div><div class="metric"><div class="metric-label">Rent growth</div><div class="metric-value">' + rentGrowthDisplay + '</div></div><div class="metric"><div class="metric-label">Vacancy</div><div class="metric-value">' + getVacancyForNeighborhood(c) + '</div></div></div>';
+      
+      html += '<div style="background: var(--surface-1); padding: 8px; border-radius: 4px; margin-bottom: 8px; border-left: 2px solid var(--border-accent);"><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;"><strong>Operating Expense Ratio</strong></div><div style="font-size: 13px; font-weight: 500; color: var(--text-accent); margin-bottom: 4px;">' + (c.opexRatio * 100).toFixed(0) + '%</div><div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">' + c.opexNotes + '</div></div>';
+      
+      const expId = 'why' + c.name.replace(/[^a-z]/gi, '');
+      html += '<button class="expand-btn" onclick="toggleExpand(\'' + expId + '\')"><span style="margin-right: 6px;">+</span>Market Analysis</button><div id="' + expId + '" class="expanded-content"><p>' + c.whyDetail + '</p></div>';
+      
+      html += '<div style="background: var(--surface-1); padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 2px solid var(--border);"><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;"><strong>Investment thesis</strong></div><div style="font-size: 12px; color: var(--text-primary); line-height: 1.6;">' + c.reasoning + '</div></div>';
+      
+      html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 12px;"><div><div style="color: var(--text-secondary); margin-bottom: 4px;"><strong>Target</strong></div><div style="color: var(--text-primary);">' + c.target + '</div></div><div><div style="color: var(--text-secondary); margin-bottom: 4px;"><strong>Trade-off</strong></div><div style="color: var(--text-warning);">' + c.tradeoff + '</div></div></div>';
+      
+      html += '<div style="border-top: 0.5px solid var(--border); padding-top: 8px; margin-top: 8px;"><div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;"><strong>Sources</strong></div><ul style="margin: 0; padding-left: 16px; font-size: 11px; color: var(--text-muted);">';
+      for (let s of c.sources) {
+        html += '<li style="margin-bottom: 2px;">' + s + '</li>';
+      }
+      html += '</ul></div></div>';
+    }
+    document.getElementById("detail").innerHTML = html;
+    document.getElementById("detail").style.display = "flex";
+    document.getElementById("detail").style.flexDirection = "column";
+    document.getElementById("detail").style.gap = "16px";
+  } else {
+    if (filtered.length === 0) {
+      document.getElementById("compare").innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">No matches.</div>';
+      return;
+    }
+    let html = '<table class="comparison-table"><thead><tr style="border-bottom: 1px solid var(--border-strong);"><th style="text-align: left; padding: 8px; color: var(--text-primary); font-weight: 500;"></th><th style="text-align: left; padding: 8px; color: var(--text-primary); font-weight: 500;">Neighborhood</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Cap</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Cap YoY</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Rent</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Rent YoY</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Growth</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Growth YoY</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Vacancy</th><th style="text-align: center; padding: 8px; color: var(--text-primary); font-weight: 500;">Vacancy YoY</th></tr></thead><tbody>';
+    for (let i = 0; i < filtered.length; i++) {
+      let c = filtered[i];
+      let bg = i % 2 === 0 ? 'transparent' : 'var(--surface-1)';
+      
+      const metros = matchMetroToNeighborhood(c);
+      let rentDisplay = '$' + c.rent;
+      let rentCurrent = getMetroRentCurrent(metros);
+      if (rentCurrent) {
+        rentDisplay = '$' + rentCurrent.toFixed(0);
+      }
+      
+      let growthDisplay = c.rentGrowth; // Already formatted as "+X.X% YoY"
+      let growthCurrent = getMetroGrowthCurrent(metros);
+      if (growthCurrent !== null) {
+        growthDisplay = growthCurrent.toFixed(2) + '%';
+      }
+      
+      let vacancyDisplay = c.vacancy;
+      let vacancyCurrent = getVacancyForNeighborhood(c);
+      if (vacancyCurrent) {
+        vacancyDisplay = vacancyCurrent;
+      }
+      
+      // Calculate YoY trends
+      let rentYoY = "—";
+      let growthYoY = "—";
+      let capYoY = "—";
+      let vacancyYoY = "—";
+      
+      // Rent YoY
+      const rentYoYData = getMetroRentYoYMedian(metros);
+      if (rentYoYData) {
+        rentYoY = formatTrendIndicator(rentYoYData.current, rentYoYData.prior);
+      }
+      
+      // Growth YoY
+      const growthYoYData = getMetroGrowthYoYMedian(metros);
+      if (growthYoYData) {
+        growthYoY = formatTrendIndicator(growthYoYData.current, growthYoYData.prior);
+      }
+      
+      // Vacancy YoY (lower is better, so inverse)
+      const vacancyYoYData = getMetroVacancyYoYMedian(metros);
+      if (vacancyYoYData) {
+        vacancyYoY = formatTrendIndicator(vacancyYoYData.current, vacancyYoYData.prior, true);
+      }
+      
+      // Cap rate trend (based on rent growth trend as proxy)
+      if (growthYoYData) {
+        capYoY = formatTrendIndicator(growthYoYData.current, growthYoYData.prior);
+      }
+      
+      html += '<tr style="border-bottom: 0.5px solid var(--border); background: ' + bg + '; cursor: pointer;" onclick="toggleChartRow(\'' + (i) + '\', event)"><td style="padding: 8px; text-align: center; color: var(--text-accent); font-weight: 500; user-select: none;">▶</td><td style="padding: 8px; color: var(--text-primary); font-weight: 500;">' + c.name + '</td><td style="padding: 8px; text-align: center; color: var(--text-accent); font-weight: 500;">' + c.capMin + '–' + c.capMax + '%</td><td style="padding: 8px; text-align: center; font-size: 11px;">' + capYoY + '</td><td style="padding: 8px; text-align: center; color: var(--text-primary); font-size: 11px;">' + rentDisplay + '</td><td style="padding: 8px; text-align: center; font-size: 11px;">' + rentYoY + '</td><td style="padding: 8px; text-align: center; color: var(--text-primary);">' + growthDisplay + '</td><td style="padding: 8px; text-align: center; font-size: 11px;">' + growthYoY + '</td><td style="padding: 8px; text-align: center; color: var(--text-primary);">' + vacancyDisplay + '</td><td style="padding: 8px; text-align: center; font-size: 11px;">' + vacancyYoY + '</td></tr>';
+      
+      // Chart row (collapsible, hidden by default)
+      const chartData = getMetroChartData(metros);
+      let chartHtml = '<tr class="chart-row-' + i + '" style="display: none; background: var(--surface-2); border-bottom: 1px solid var(--border);"><td colspan="10" style="padding: 16px;"><div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">';
+      
+      if (chartData.rent) {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Rent (60mo + 12mo forecast)</div>' + renderMiniChart(chartData.rent, 'Rent', '$/mo') + '</div>';
+      } else {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-muted);">Rent data unavailable</div></div>';
+      }
+      
+      if (chartData.growth) {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Growth (60mo + 12mo forecast)</div>' + renderMiniChart(chartData.growth, 'Growth', '%') + '</div>';
+      } else {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-muted);">Growth data unavailable</div></div>';
+      }
+      
+      if (chartData.vacancy) {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Vacancy (60mo + 12mo forecast)</div>' + renderMiniChart(chartData.vacancy, 'Vacancy', '%') + '</div>';
+      } else {
+        chartHtml += '<div><div style="font-size: 12px; color: var(--text-muted);">Vacancy data unavailable</div></div>';
+      }
+      
+      chartHtml += '</div></td></tr>';
+      html += chartHtml;
+    }
+    html += '</tbody></table>';
+    document.getElementById("compare").innerHTML = html;
+  }
+}
+
+function toggleChartRow(idx, event) {
+  event.stopPropagation();
+  const rows = document.querySelectorAll('.chart-row-' + idx);
+  const btn = event.currentTarget.querySelector('td:first-child');
+  
+  if (rows.length > 0) {
+    const isHidden = rows[0].style.display === 'none';
+    rows.forEach(row => row.style.display = isHidden ? 'table-row' : 'none');
+    btn.textContent = isHidden ? '▼' : '▶';
+  }
+}
+
+function saveState() {
+  const state = {
+    pp: document.getElementById("pp").value,
+    dp: document.getElementById("dp").value,
+    reno: document.getElementById("reno").value,
+    cr: document.getElementById("cr").value,
+    loanRate: document.getElementById("loanRate").value,
+    loanTerm: document.getElementById("loanTerm").value,
+    market: currentMarket,
+    importedData: importedData
+  };
+  localStorage.setItem('investmentToolState', JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem('investmentToolState');
+  if (saved) {
+    try {
+      const state = JSON.parse(saved);
+      document.getElementById("pp").value = state.pp || 1200000;
+      document.getElementById("dp").value = state.dp || 33;
+      document.getElementById("reno").value = state.reno || 5;
+      document.getElementById("cr").value = state.cr || 5.5;
+      document.getElementById("loanRate").value = state.loanRate || 6.5;
+      document.getElementById("loanTerm").value = state.loanTerm || 30;
+      currentMarket = state.market || "IE";
+      if (state.importedData) {
+        importedData = state.importedData;
+        updateDataStatus();
+      }
+    } catch (e) {
+      console.log('Load state failed, using defaults');
+    }
+  }
+}
+
+document.getElementById("pp").addEventListener("input", updateCalcs);
+document.getElementById("dp").addEventListener("input", updateCalcs);
+document.getElementById("reno").addEventListener("input", updateCalcs);
+document.getElementById("cr").addEventListener("input", updateCalcs);
+document.getElementById("loanRate").addEventListener("input", updateCalcs);
+document.getElementById("loanTerm").addEventListener("input", updateCalcs);
+
+document.getElementById("chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    sendChatMessage();
+  }
+});
+
+loadState();
+setMarket(currentMarket);
+updateCalcs();
+setupContextMenu();
+</script>
+
+</body>
+</html>
