@@ -790,10 +790,9 @@ function handleZillowFile(event) {
       const lines = parseCSV(csv);
       const header = lines[0];
       
-      const locationNameIdx = header.findIndex(h => h.includes('location_name'));
-      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-      const metroIdx = header.findIndex(h => h === 'metro');
-      const dataStartIdx = 7;
+      const regionNameIdx = header.findIndex(h => h === 'RegionName');
+      const regionTypeIdx = header.findIndex(h => h === 'RegionType');
+      const dataStartIdx = 5; // Data starts after StateName (index 4)
       
       const data = {};
       
@@ -801,12 +800,11 @@ function handleZillowFile(event) {
         const values = lines[i];
         if (!values[0]) continue;
         
-        const locationName = values[locationNameIdx];
-        const locationType = values[locationTypeIdx];
-        const metro = values[metroIdx];
+        const regionName = values[regionNameIdx];
+        const regionType = values[regionTypeIdx];
         
-        // Skip if location_type is not Metro or metro is blank
-        if (locationType !== 'Metro' || !metro) continue;
+        // Only include metros (RegionType == "msa")
+        if (regionType !== 'msa') continue;
         
         const monthlyValues = [];
         for (let j = dataStartIdx; j < values.length; j++) {
@@ -814,7 +812,7 @@ function handleZillowFile(event) {
           if (!isNaN(val)) monthlyValues.push(val);
         }
         if (monthlyValues.length > 0) {
-          data[metro] = monthlyValues;
+          data[regionName] = monthlyValues;
         }
       }
       
@@ -937,26 +935,32 @@ function handleVacancyFile(event) {
 // ============ FIXED METRO MATCHING ============
 
 function matchMetroToNeighborhood(neighborhood) {
-// FIX: Map neighborhoods to exact metro names from CSVs
-const metroMap = {
-"Moreno Valley": {
-apartment: "Riverside-San Bernardino-Ontario, CA"
-},
-"East Riverside": {
-apartment: "Riverside-San Bernardino-Ontario, CA"
-},
-"Victorville": {
-apartment: "Victorville-Hesperia-Apple Valley, CA"
-},
-"Escondido – Central": {
-apartment: "San Diego-Chula Vista-Carlsbad, CA"
-},
-"Vista – North County": {
-apartment: "San Diego-Chula Vista-Carlsbad, CA"
-}
-};
+  // Zillow uses shorter metro names like "San Diego, CA"
+  // Apartment List uses longer names like "San Diego-Chula Vista-Carlsbad, CA"
+  const metroMap = {
+    "Moreno Valley": {
+      zillow: "Riverside, CA",
+      apartment: "Riverside-San Bernardino-Ontario, CA"
+    },
+    "East Riverside": {
+      zillow: "Riverside, CA",
+      apartment: "Riverside-San Bernardino-Ontario, CA"
+    },
+    "Victorville": {
+      zillow: "Victorville, CA",
+      apartment: "Victorville-Hesperia-Apple Valley, CA"
+    },
+    "Escondido – Central": {
+      zillow: "San Diego, CA",
+      apartment: "San Diego-Chula Vista-Carlsbad, CA"
+    },
+    "Vista – North County": {
+      zillow: "San Diego, CA",
+      apartment: "San Diego-Chula Vista-Carlsbad, CA"
+    }
+  };
 
-return metroMap[neighborhood.name] || { apartment: neighborhood.name };
+  return metroMap[neighborhood.name] || { zillow: neighborhood.name, apartment: neighborhood.name };
 }
 
 function updateDataStatus() {
