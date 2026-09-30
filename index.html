@@ -738,166 +738,202 @@ updateCalcs();
 
 // ============ FIXED PARSERS - Filter for 'Metro' type and correct metro names ============
 
+// Proper CSV parser that handles quoted fields
+function parseCSV(csv) {
+  const lines = [];
+  let currentLine = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < csv.length; i++) {
+    const char = csv[i];
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      currentLine += char;
+    } else if (char === '\n' && !insideQuotes) {
+      lines.push(currentLine);
+      currentLine = '';
+    } else {
+      currentLine += char;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  
+  return lines.map(line => {
+    const result = [];
+    let current = '';
+    let insideQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === ',' && !insideQuotes) {
+        result.push(current.replace(/^"|"$/g, '').trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.replace(/^"|"$/g, '').trim());
+    return result;
+  });
+}
+
 function handleZillowFile(event) {
-const file = event.target.files[0];
-if (!file) return;
-
-const reader = new FileReader();
-reader.onload = (e) => {
-try {
-const csv = e.target.result;
-const lines = csv.split('\n');
-const header = lines[0].split(',');
-
-// Find column indices
-const locationNameIdx = header.findIndex(h => h.includes('location_name'));
-const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-const dataStartIdx = 7; // Monthly data starts at column 7 (2017_01)
-
-const data = {};
-
-for (let i = 1; i < lines.length; i++) {
-if (!lines[i].trim()) continue;
-
-const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
-
-const locationName = values[locationNameIdx];
-const locationType = values[locationTypeIdx];
-
-// FIX: Filter for 'Metro' type instead of 'msa'
-if (locationType === 'Metro') {
-const monthlyValues = [];
-for (let j = dataStartIdx; j < values.length; j++) {
-const val = parseFloat(values[j]);
-if (!isNaN(val)) monthlyValues.push(val);
-}
-if (monthlyValues.length > 0) {
-data[locationName] = monthlyValues;
-}
-}
-}
-
-importedData.zillow = data;
-saveState();
-document.getElementById("zillowStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-document.getElementById("zillowStatus").classList.add("loaded");
-updateDataStatus();
-refreshData();
-
-} catch (err) {
-document.getElementById("zillowStatus").textContent = "❌ Parse error";
-document.getElementById("zillowStatus").classList.add("error");
-}
-};
-reader.readAsText(file);
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = parseCSV(csv);
+      const header = lines[0];
+      
+      const locationNameIdx = header.findIndex(h => h.includes('location_name'));
+      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
+      const metroIdx = header.findIndex(h => h === 'metro');
+      const dataStartIdx = 7;
+      
+      const data = {};
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i];
+        if (!values[0]) continue;
+        
+        const locationName = values[locationNameIdx];
+        const locationType = values[locationTypeIdx];
+        const metro = values[metroIdx];
+        
+        // Skip if location_type is not Metro or metro is blank
+        if (locationType !== 'Metro' || !metro) continue;
+        
+        const monthlyValues = [];
+        for (let j = dataStartIdx; j < values.length; j++) {
+          const val = parseFloat(values[j]);
+          if (!isNaN(val)) monthlyValues.push(val);
+        }
+        if (monthlyValues.length > 0) {
+          data[metro] = monthlyValues;
+        }
+      }
+      
+      importedData.zillow = data;
+      saveState();
+      document.getElementById("zillowStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("zillowStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+      
+    } catch (err) {
+      document.getElementById("zillowStatus").textContent = "❌ Parse error";
+      document.getElementById("zillowStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function handleApartmentFile(event) {
-const file = event.target.files[0];
-if (!file) return;
-
-const reader = new FileReader();
-reader.onload = (e) => {
-try {
-const csv = e.target.result;
-const lines = csv.split('\n');
-const header = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-
-const locationNameIdx = header.findIndex(h => h.includes('location_name'));
-const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-const dataStartIdx = 7;
-
-const data = {};
-
-for (let i = 1; i < lines.length; i++) {
-if (!lines[i].trim()) continue;
-
-const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
-
-const locationName = values[locationNameIdx];
-const locationType = values[locationTypeIdx];
-
-// FIX: Filter for 'Metro' type
-if (locationType === 'Metro') {
-const monthlyValues = [];
-for (let j = dataStartIdx; j < values.length; j++) {
-const val = parseFloat(values[j]);
-if (!isNaN(val)) monthlyValues.push(val * 100);
-}
-if (monthlyValues.length > 0) {
-data[locationName] = monthlyValues;
-}
-}
-}
-
-importedData.apartment = data;
-saveState();
-document.getElementById("apartmentStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-document.getElementById("apartmentStatus").classList.add("loaded");
-updateDataStatus();
-refreshData();
-
-} catch (err) {
-document.getElementById("apartmentStatus").textContent = "❌ Parse error";
-document.getElementById("apartmentStatus").classList.add("error");
-}
-};
-reader.readAsText(file);
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = parseCSV(csv);
+      const header = lines[0];
+      
+      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
+      const metroIdx = header.findIndex(h => h === 'metro');
+      const dataStartIdx = 7;
+      
+      const data = {};
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i];
+        if (!values[0]) continue;
+        
+        const locationType = values[locationTypeIdx];
+        const metro = values[metroIdx];
+        
+        if (locationType !== 'Metro' || !metro) continue;
+        
+        const monthlyValues = [];
+        for (let j = dataStartIdx; j < values.length; j++) {
+          const val = parseFloat(values[j]);
+          if (!isNaN(val)) monthlyValues.push(val * 100);
+        }
+        if (monthlyValues.length > 0) {
+          data[metro] = monthlyValues;
+        }
+      }
+      
+      importedData.apartment = data;
+      saveState();
+      document.getElementById("apartmentStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("apartmentStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+      
+    } catch (err) {
+      document.getElementById("apartmentStatus").textContent = "❌ Parse error";
+      document.getElementById("apartmentStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function handleVacancyFile(event) {
-const file = event.target.files[0];
-if (!file) return;
-
-const reader = new FileReader();
-reader.onload = (e) => {
-try {
-const csv = e.target.result;
-const lines = csv.split('\n');
-const header = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-
-const locationNameIdx = header.findIndex(h => h.includes('location_name'));
-const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-const dataStartIdx = 7;
-
-const data = {};
-
-for (let i = 1; i < lines.length; i++) {
-if (!lines[i].trim()) continue;
-
-const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
-
-const locationName = values[locationNameIdx];
-const locationType = values[locationTypeIdx];
-
-// FIX: Filter for 'Metro' type
-if (locationType === 'Metro') {
-const monthlyValues = [];
-for (let j = dataStartIdx; j < values.length; j++) {
-const val = parseFloat(values[j]);
-if (!isNaN(val)) monthlyValues.push(val * 100);
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const lines = parseCSV(csv);
+      const header = lines[0];
+      
+      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
+      const metroIdx = header.findIndex(h => h === 'metro');
+      const dataStartIdx = 7;
+      
+      const data = {};
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i];
+        if (!values[0]) continue;
+        
+        const locationType = values[locationTypeIdx];
+        const metro = values[metroIdx];
+        
+        if (locationType !== 'Metro' || !metro) continue;
+        
+        const monthlyValues = [];
+        for (let j = dataStartIdx; j < values.length; j++) {
+          const val = parseFloat(values[j]);
+          if (!isNaN(val)) monthlyValues.push(val * 100);
+        }
+        if (monthlyValues.length > 0) {
+          data[metro] = monthlyValues;
+        }
+      }
+      
+      importedData.vacancy = data;
+      saveState();
+      document.getElementById("vacancyStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+      document.getElementById("vacancyStatus").classList.add("loaded");
+      updateDataStatus();
+      refreshData();
+      
+    } catch (err) {
+      document.getElementById("vacancyStatus").textContent = "❌ Parse error";
+      document.getElementById("vacancyStatus").classList.add("error");
+    }
+  };
+  reader.readAsText(file);
 }
-if (monthlyValues.length > 0) {
-data[locationName] = monthlyValues;
-}
-}
-}
-
-importedData.vacancy = data;
-saveState();
-document.getElementById("vacancyStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-document.getElementById("vacancyStatus").classList.add("loaded");
-updateDataStatus();
-refreshData();
-
-} catch (err) {
-document.getElementById("vacancyStatus").textContent = "❌ Parse error";
-document.getElementById("vacancyStatus").classList.add("error");
-}
-};
-reader.readAsText(file);
-}
-
 // ============ FIXED METRO MATCHING ============
 
 function matchMetroToNeighborhood(neighborhood) {
