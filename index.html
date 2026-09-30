@@ -193,11 +193,6 @@ button:hover {
 border-color: var(--text-accent);
 }
 
-.divider {
-border-top: 1px solid var(--border);
-margin: 16px 0;
-}
-
 .info-box {
 background: var(--surface-2);
 padding: 12px;
@@ -260,14 +255,6 @@ background: var(--bg-accent);
 color: var(--text-accent);
 padding: 2px 6px;
 border-radius: 3px;
-}
-
-.metro-source {
-font-size: 10px;
-color: var(--text-muted);
-margin-top: 6px;
-padding-top: 6px;
-border-top: 0.5px solid var(--border);
 }
 
 .metrics-grid {
@@ -354,6 +341,11 @@ border-bottom: 0.5px solid var(--border);
 background: var(--surface-1);
 }
 
+.comparison-table tbody tr:hover {
+background: rgba(99, 179, 237, 0.05);
+cursor: pointer;
+}
+
 .data-status {
 font-size: 11px;
 color: var(--text-muted);
@@ -366,6 +358,78 @@ margin-bottom: 12px;
 .data-status.loaded {
 color: var(--text-success);
 background: rgba(104, 211, 145, 0.1);
+}
+
+.metro-source {
+font-size: 10px;
+color: var(--text-muted);
+margin-top: 6px;
+padding-top: 6px;
+border-top: 0.5px solid var(--border);
+}
+
+.chart-container {
+padding: 16px;
+background: var(--surface-2);
+border-radius: 8px;
+margin-top: 8px;
+}
+
+.chart-row {
+display: none;
+}
+
+.chart-row.active {
+display: table-row;
+}
+
+.claude-sidebar {
+position: fixed;
+right: -400px;
+top: 0;
+width: 400px;
+height: 100vh;
+background: var(--surface-1);
+border-left: 1px solid var(--border);
+display: flex;
+flex-direction: column;
+transition: right 0.3s ease;
+z-index: 1000;
+box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.claude-sidebar.open {
+right: 0;
+}
+
+.claude-sidebar-header {
+padding: 16px;
+border-bottom: 1px solid var(--border);
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.claude-sidebar-content {
+flex: 1;
+overflow-y: auto;
+padding: 16px;
+font-size: 12px;
+}
+
+.claude-sidebar-content p {
+margin: 0 0 12px 0;
+line-height: 1.6;
+color: var(--text-secondary);
+}
+
+.claude-sidebar-content strong {
+color: var(--text-primary);
+}
+
+.claude-sidebar-footer {
+padding: 12px 16px;
+border-top: 1px solid var(--border);
 }
 
 </style>
@@ -500,8 +564,8 @@ No data imported
 <div class="info-box">
 <strong>Step 1:</strong> Download Zillow ZORI, Apartment List Growth, and Apartment List Vacancy CSVs.<br><br>
 <strong>Step 2:</strong> Upload all files here.<br><br>
-<strong>Step 3:</strong> Your neighborhoods will update with current market data shown as "Current" values.<br><br>
-<strong>Step 4:</strong> Right-click any neighborhood card to ask Claude questions about it.
+<strong>Step 3:</strong> Your neighborhoods will update with current market data.<br><br>
+<strong>Step 4:</strong> Right-click any neighborhood card to ask Claude questions.
 </div>
 </div>
 
@@ -522,25 +586,40 @@ No data imported
 
 </div>
 
-<!-- CHAT SIDEBAR -->
-<div id="chatSidebar" style="display: none; position: fixed; right: 0; top: 0; width: 380px; height: 100vh; background: var(--surface-1); border-left: 1px solid var(--border); z-index: 1000; flex-direction: column;">
-<div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-<h3 style="margin: 0; font-size: 14px; font-weight: 600;">Ask Claude</h3>
-<button onclick="closeChatSidebar()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+<!-- CLAUDE SIDEBAR -->
+<div id="claudeSidebar" class="claude-sidebar">
+<div class="claude-sidebar-header">
+<div style="font-weight: 600; color: var(--text-primary);">Ask Claude</div>
+<button onclick="closeSidebar()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px; padding: 0; width: 24px; height: 24px;">✕</button>
 </div>
-<div id="chatMessages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;"></div>
-<div style="padding: 16px; border-top: 1px solid var(--border);">
-<div style="display: flex; gap: 8px; margin-bottom: 8px;">
-<input type="text" id="chatInput" placeholder="Ask about this neighborhood..." style="flex: 1; padding: 8px; border: 0.5px solid var(--border); border-radius: 4px; background: transparent; color: var(--text-primary); font-size: 12px;">
-<button onclick="sendChatMessage()" style="padding: 8px 12px; background: var(--text-accent); color: #0f1419; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">Send</button>
+
+<div class="claude-sidebar-content" id="sidebarContent">
 </div>
-<div id="contextInfo" style="font-size: 11px; color: var(--text-muted); background: var(--surface-2); padding: 8px; border-radius: 4px; border-left: 2px solid var(--border-accent);"></div>
+
+<div class="claude-sidebar-footer">
+<button id="sendButton" onclick="sendToChat()" style="width: 100%; padding: 10px; background: var(--text-accent); color: #0f1419; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Send to Claude</button>
 </div>
 </div>
 
 </div>
 
 <script>
+
+let investmentFundamentals = {
+minRent: 1325,
+maxRent: 1750,
+maxVacancy: 6,
+minGrowth: 1
+};
+
+function updateFundamentals() {
+investmentFundamentals.minRent = parseFloat(document.getElementById('minRentInput').value);
+investmentFundamentals.maxRent = parseFloat(document.getElementById('maxRentInput').value);
+investmentFundamentals.maxVacancy = parseFloat(document.getElementById('maxVacancyInput').value);
+investmentFundamentals.minGrowth = parseFloat(document.getElementById('minGrowthInput').value);
+saveState();
+refreshData();
+}
 
 const neighborhoods = [
 {
@@ -556,11 +635,12 @@ jobGrowth: "+1.8% YoY",
 tier: 1,
 opexRatio: 0.35,
 opexNotes: "Older stock (1980s–2000s), moderate CA taxes, logistics-area labor costs, standard vacancy risk",
-whyDetail: "Moreno Valley is the highest-cap-rate corridor in Inland Empire because it sits in the sweet spot of supply constraints and working-class demand stability. The neighborhood has experienced consistent 1.8% job growth YoY primarily from logistics and warehouse expansion along I-215, which is a structural tailwind that won't reverse. Rents run $1,400–$1,650/2BR—40–50 bps below Orange County and 10–15% below San Diego—which creates natural demand from cost-conscious renters. Vacancy sits at 4.9%, suggesting healthy but not speculative demand. The reason cap rates hit 6.8%+ is straightforward: institutional capital is overweighting San Diego and Orange County, leaving Moreno Valley at a 100bps discount. This is your margin of safety. With $400K capital, buying a 6.8%+ cap deal here leaves you $150K+ in post-close reserves. That matters when the first tenant-vacated maintenance hits in year 2.",
+whyDetail: "Moreno Valley is the highest-cap-rate corridor in Inland Empire because it sits in the sweet spot of supply constraints and working-class demand stability. The neighborhood has experienced consistent 1.8% job growth YoY primarily from logistics and warehouse expansion along I-215, which is a structural tailwind that won't reverse. Rents run $1,400–$1,650/2BR—40–50 bps below Orange County and 10–15% below San Diego—which creates natural demand from cost-conscious renters. Vacancy sits at 4.9%, suggesting healthy but not speculative demand. The reason cap rates hit 6.8%+ is straightforward: institutional capital is overweighting San Diego and Orange County, leaving Moreno Valley at a 100bps discount. This is your margin of safety. With $400K capital, buying a 6.8%+ cap deal here leaves you $150K+ in post-close reserves.",
 reasoning: "Your $400K capital demands margin of safety. 6.8%+ cap leaves $150K+ post-close reserves.",
 target: "8-unit, $1.2–$1.4M, 6.7%+ cap",
 tradeoff: "Slower rent growth (2–3% vs 4–5% SD) means longer value-add horizon.",
-sources: ["Zillow ZORI", "Apartment List Growth", "Apartment List Vacancy"]
+zillowMetro: "Riverside, CA",
+apartmentMetro: "Riverside-San Bernardino-Ontario, CA"
 },
 {
 name: "East Riverside",
@@ -579,7 +659,8 @@ whyDetail: "East Riverside (Linden area) is emerging as the tech-lite corridor o
 reasoning: "Sweet spot between cap rate and growth. Rent growth accelerates 1–2% above IE average.",
 target: "6–8 unit, $1.15–$1.35M, 6.4%+ cap",
 tradeoff: "100bps lower than Moreno Valley caps.",
-sources: ["Zillow ZORI", "Apartment List Growth", "Apartment List Vacancy"]
+zillowMetro: "Riverside, CA",
+apartmentMetro: "Riverside-San Bernardino-Ontario, CA"
 },
 {
 name: "Escondido – Central",
@@ -594,11 +675,12 @@ jobGrowth: "+2.3% YoY",
 tier: 3,
 opexRatio: 0.32,
 opexNotes: "Newer stock (2005+), higher CA property taxes (SD), higher labor costs, stable tenants lower vacancy impact, tech-hub quality reduces aging burden",
-whyDetail: "Escondido Central is the highest-velocity rent-growth market in North County San Diego, driven by spillover from the Tesla Gigafactory in neighboring Carlsbad and aerospace/defense consolidation. Job growth runs 2.3% YoY but is biased toward high-wage roles ($70K–$120K), which means tenant quality improves faster than in Inland Empire. Rents have hit $1,550–$1,850/2BR and are growing at 3.8% YoY—double the Inland Empire rate.",
+whyDetail: "Escondido Central is the highest-velocity rent-growth market in North County San Diego, driven by spillover from the Tesla Gigafactory in neighboring Carlsbad and aerospace/defense consolidation. Job growth runs 2.3% YoY but is biased toward high-wage roles ($70K–$120K), which means tenant quality improves faster than in Inland Empire. Rents have hit $1,550–$1,850/2BR and are growing at 3.8% YoY—double the Inland Empire rate. The price tag compresses your post-close reserves, but you get 5-year exit velocity that Inland Empire cannot match.",
 reasoning: "Higher price compresses reserves to $50–100K. Justified if 5-year exit is priority.",
 target: "8-unit, $1.25–$1.45M, 6.2%+ cap",
 tradeoff: "Requires clean ops, tight early margins.",
-sources: ["Zillow ZORI", "Apartment List Growth", "Apartment List Vacancy"]
+zillowMetro: "San Diego, CA",
+apartmentMetro: "San Diego-Chula Vista-Carlsbad, CA"
 },
 {
 name: "Vista – North County",
@@ -613,11 +695,12 @@ jobGrowth: "+2.0% YoY",
 tier: 4,
 opexRatio: 0.32,
 opexNotes: "Moderate property ages, military stability reduces vacancy allowance significantly, higher CA taxes, lower labor churn = lower maintenance peaks",
-whyDetail: "Vista is a stability play, not a growth play. Its primary economic driver is Camp Pendleton (5 miles north), which generates stable, non-cyclical demand from military families.",
+whyDetail: "Vista is a stability play, not a growth play. Its primary economic driver is Camp Pendleton (5 miles north), which generates stable, non-cyclical demand from military families. Job growth runs 2.0% YoY—flat to slightly below state average—but the demand is structural and recession-resistant. Rents are $1,600–$1,900/2BR. The value proposition here is not appreciation, but operational predictability and tenant stickiness.",
 reasoning: "Stability over appreciation. Cap floor 5.8%—barely works. Pick only if all other boxes check.",
 target: "6-unit, $1.1–$1.3M, 6.1%+ cap",
 tradeoff: "Lower rent ceiling limits upside.",
-sources: ["Zillow ZORI", "Apartment List Growth", "Apartment List Vacancy"]
+zillowMetro: "San Diego, CA",
+apartmentMetro: "San Diego-Chula Vista-Carlsbad, CA"
 },
 {
 name: "Victorville",
@@ -632,11 +715,12 @@ jobGrowth: "+1.3% YoY",
 tier: 5,
 opexRatio: 0.39,
 opexNotes: "Oldest stock (1970s–1990s), highest maintenance burden, remote location increases service costs, military base stability reduces vacancy but aging systems require more capex reserves",
-whyDetail: "Victorville is the ultimate capital-preservation play. Cap rates run 6.8–7.2%—highest in your search area—because institutional investors see limited upside and meaningful downside risk.",
+whyDetail: "Victorville is the ultimate capital-preservation play. Cap rates run 6.8–7.2%—highest in your search area—because institutional investors see limited upside and meaningful downside risk. The market is remote (40+ miles from everything), the property stock is old, and rent growth is stalled at 1.5% YoY. But here's what makes it useful: if the entire market corrects, Victorville's already-compressed cap rates provide a floor. Your downside is cushioned.",
 reasoning: "Pure safety play. Insulates from downturns. BUT: Low rent ceiling makes 5-year exit difficult.",
 target: "4–5 unit, $900K–$1.1M, 7%+ cap",
 tradeoff: "Slowest growth, hardest exit.",
-sources: ["Zillow ZORI", "Apartment List Growth", "Apartment List Vacancy"]
+zillowMetro: "Victorville, CA",
+apartmentMetro: "Victorville-Hesperia-Apple Valley, CA"
 }
 ];
 
@@ -645,8 +729,6 @@ const CLOSING_COST_RATE = 0.025;
 
 let currentMarket = "IE", currentMinCap = 5.5, currentView = "detail";
 let importedData = { zillow: null, apartment: null, vacancy: null };
-let currentContextNeighborhood = null;
-let chatMessages = [];
 
 function switchTab(tab) {
 document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -736,231 +818,197 @@ document.getElementById("mb").classList.toggle("active", m === "both");
 updateCalcs();
 }
 
-// ============ FIXED PARSERS - Filter for 'Metro' type and correct metro names ============
-
-// Proper CSV parser that handles quoted fields
 function parseCSV(csv) {
-  const lines = [];
-  let currentLine = '';
-  let insideQuotes = false;
-  
-  for (let i = 0; i < csv.length; i++) {
-    const char = csv[i];
-    if (char === '"') {
-      insideQuotes = !insideQuotes;
-      currentLine += char;
-    } else if (char === '\n' && !insideQuotes) {
-      lines.push(currentLine);
-      currentLine = '';
-    } else {
-      currentLine += char;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  
-  return lines.map(line => {
-    const result = [];
-    let current = '';
-    let insideQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        insideQuotes = !insideQuotes;
-      } else if (char === ',' && !insideQuotes) {
-        result.push(current.replace(/^"|"$/g, '').trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.replace(/^"|"$/g, '').trim());
-    return result;
-  });
+const lines = [];
+let currentLine = '';
+let insideQuotes = false;
+
+for (let i = 0; i < csv.length; i++) {
+const char = csv[i];
+if (char === '"') {
+insideQuotes = !insideQuotes;
+currentLine += char;
+} else if (char === '\n' && !insideQuotes) {
+lines.push(currentLine);
+currentLine = '';
+} else {
+currentLine += char;
+}
+}
+if (currentLine) lines.push(currentLine);
+
+return lines.map(line => {
+const result = [];
+let current = '';
+let insideQuotes = false;
+
+for (let i = 0; i < line.length; i++) {
+const char = line[i];
+if (char === '"') {
+insideQuotes = !insideQuotes;
+} else if (char === ',' && !insideQuotes) {
+result.push(current.replace(/^"|"$/g, '').trim());
+current = '';
+} else {
+current += char;
+}
+}
+result.push(current.replace(/^"|"$/g, '').trim());
+return result;
+});
 }
 
 function handleZillowFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const csv = e.target.result;
-      const lines = parseCSV(csv);
-      const header = lines[0];
-      
-      const regionNameIdx = header.findIndex(h => h === 'RegionName');
-      const regionTypeIdx = header.findIndex(h => h === 'RegionType');
-      const dataStartIdx = 5; // Data starts after StateName (index 4)
-      
-      const data = {};
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i];
-        if (!values[0]) continue;
-        
-        const regionName = values[regionNameIdx];
-        const regionType = values[regionTypeIdx];
-        
-        // Only include metros (RegionType == "msa")
-        if (regionType !== 'msa') continue;
-        
-        const monthlyValues = [];
-        for (let j = dataStartIdx; j < values.length; j++) {
-          const val = parseFloat(values[j]);
-          if (!isNaN(val)) monthlyValues.push(val);
-        }
-        if (monthlyValues.length > 0) {
-          data[regionName] = monthlyValues;
-        }
-      }
-      
-      importedData.zillow = data;
-      saveState();
-      document.getElementById("zillowStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-      document.getElementById("zillowStatus").classList.add("loaded");
-      updateDataStatus();
-      refreshData();
-      
-    } catch (err) {
-      document.getElementById("zillowStatus").textContent = "❌ Parse error";
-      document.getElementById("zillowStatus").classList.add("error");
-    }
-  };
-  reader.readAsText(file);
+const file = event.target.files[0];
+if (!file) return;
+
+const reader = new FileReader();
+reader.onload = (e) => {
+try {
+const csv = e.target.result;
+const lines = parseCSV(csv);
+const header = lines[0];
+
+const regionNameIdx = header.findIndex(h => h === 'RegionName');
+const regionTypeIdx = header.findIndex(h => h === 'RegionType');
+const dataStartIdx = 5;
+
+const data = {};
+
+for (let i = 1; i < lines.length; i++) {
+const values = lines[i];
+if (!values[0]) continue;
+
+const regionName = values[regionNameIdx];
+const regionType = values[regionTypeIdx];
+
+if (regionType !== 'msa') continue;
+
+const monthlyValues = [];
+for (let j = dataStartIdx; j < values.length; j++) {
+const val = parseFloat(values[j]);
+if (!isNaN(val)) monthlyValues.push(val);
+}
+if (monthlyValues.length > 0) {
+data[regionName] = monthlyValues;
+}
+}
+
+importedData.zillow = data;
+saveState();
+document.getElementById("zillowStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+document.getElementById("zillowStatus").classList.add("loaded");
+updateDataStatus();
+refreshData();
+
+} catch (err) {
+document.getElementById("zillowStatus").textContent = "❌ Parse error";
+document.getElementById("zillowStatus").classList.add("error");
+}
+};
+reader.readAsText(file);
 }
 
 function handleApartmentFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const csv = e.target.result;
-      const lines = parseCSV(csv);
-      const header = lines[0];
-      
-      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-      const metroIdx = header.findIndex(h => h === 'metro');
-      const dataStartIdx = 7;
-      
-      const data = {};
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i];
-        if (!values[0]) continue;
-        
-        const locationType = values[locationTypeIdx];
-        const metro = values[metroIdx];
-        
-        if (locationType !== 'Metro' || !metro) continue;
-        
-        const monthlyValues = [];
-        for (let j = dataStartIdx; j < values.length; j++) {
-          const val = parseFloat(values[j]);
-          if (!isNaN(val)) monthlyValues.push(val * 100);
-        }
-        if (monthlyValues.length > 0) {
-          data[metro] = monthlyValues;
-        }
-      }
-      
-      importedData.apartment = data;
-      saveState();
-      document.getElementById("apartmentStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-      document.getElementById("apartmentStatus").classList.add("loaded");
-      updateDataStatus();
-      refreshData();
-      
-    } catch (err) {
-      document.getElementById("apartmentStatus").textContent = "❌ Parse error";
-      document.getElementById("apartmentStatus").classList.add("error");
-    }
-  };
-  reader.readAsText(file);
+const file = event.target.files[0];
+if (!file) return;
+
+const reader = new FileReader();
+reader.onload = (e) => {
+try {
+const csv = e.target.result;
+const lines = parseCSV(csv);
+const header = lines[0];
+
+const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
+const metroIdx = header.findIndex(h => h === 'metro');
+const dataStartIdx = 7;
+
+const data = {};
+
+for (let i = 1; i < lines.length; i++) {
+const values = lines[i];
+if (!values[0]) continue;
+
+const locationType = values[locationTypeIdx];
+const metro = values[metroIdx];
+
+if (locationType !== 'Metro' || !metro) continue;
+
+const monthlyValues = [];
+for (let j = dataStartIdx; j < values.length; j++) {
+const val = parseFloat(values[j]);
+if (!isNaN(val)) monthlyValues.push(val * 100);
+}
+if (monthlyValues.length > 0) {
+data[metro] = monthlyValues;
+}
+}
+
+importedData.apartment = data;
+saveState();
+document.getElementById("apartmentStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+document.getElementById("apartmentStatus").classList.add("loaded");
+updateDataStatus();
+refreshData();
+
+} catch (err) {
+document.getElementById("apartmentStatus").textContent = "❌ Parse error";
+document.getElementById("apartmentStatus").classList.add("error");
+}
+};
+reader.readAsText(file);
 }
 
 function handleVacancyFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const csv = e.target.result;
-      const lines = parseCSV(csv);
-      const header = lines[0];
-      
-      const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
-      const metroIdx = header.findIndex(h => h === 'metro');
-      const dataStartIdx = 7;
-      
-      const data = {};
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i];
-        if (!values[0]) continue;
-        
-        const locationType = values[locationTypeIdx];
-        const metro = values[metroIdx];
-        
-        if (locationType !== 'Metro' || !metro) continue;
-        
-        const monthlyValues = [];
-        for (let j = dataStartIdx; j < values.length; j++) {
-          const val = parseFloat(values[j]);
-          if (!isNaN(val)) monthlyValues.push(val * 100);
-        }
-        if (monthlyValues.length > 0) {
-          data[metro] = monthlyValues;
-        }
-      }
-      
-      importedData.vacancy = data;
-      saveState();
-      document.getElementById("vacancyStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
-      document.getElementById("vacancyStatus").classList.add("loaded");
-      updateDataStatus();
-      refreshData();
-      
-    } catch (err) {
-      document.getElementById("vacancyStatus").textContent = "❌ Parse error";
-      document.getElementById("vacancyStatus").classList.add("error");
-    }
-  };
-  reader.readAsText(file);
+const file = event.target.files[0];
+if (!file) return;
+
+const reader = new FileReader();
+reader.onload = (e) => {
+try {
+const csv = e.target.result;
+const lines = parseCSV(csv);
+const header = lines[0];
+
+const locationTypeIdx = header.findIndex(h => h.includes('location_type'));
+const metroIdx = header.findIndex(h => h === 'metro');
+const dataStartIdx = 7;
+
+const data = {};
+
+for (let i = 1; i < lines.length; i++) {
+const values = lines[i];
+if (!values[0]) continue;
+
+const locationType = values[locationTypeIdx];
+const metro = values[metroIdx];
+
+if (locationType !== 'Metro' || !metro) continue;
+
+const monthlyValues = [];
+for (let j = dataStartIdx; j < values.length; j++) {
+const val = parseFloat(values[j]);
+if (!isNaN(val)) monthlyValues.push(val * 100);
 }
-// ============ FIXED METRO MATCHING ============
+if (monthlyValues.length > 0) {
+data[metro] = monthlyValues;
+}
+}
 
-function matchMetroToNeighborhood(neighborhood) {
-  // Zillow uses shorter metro names like "San Diego, CA"
-  // Apartment List uses longer names like "San Diego-Chula Vista-Carlsbad, CA"
-  const metroMap = {
-    "Moreno Valley": {
-      zillow: "Riverside, CA",
-      apartment: "Riverside-San Bernardino-Ontario, CA"
-    },
-    "East Riverside": {
-      zillow: "Riverside, CA",
-      apartment: "Riverside-San Bernardino-Ontario, CA"
-    },
-    "Victorville": {
-      zillow: "Victorville, CA",
-      apartment: "Victorville-Hesperia-Apple Valley, CA"
-    },
-    "Escondido – Central": {
-      zillow: "San Diego, CA",
-      apartment: "San Diego-Chula Vista-Carlsbad, CA"
-    },
-    "Vista – North County": {
-      zillow: "San Diego, CA",
-      apartment: "San Diego-Chula Vista-Carlsbad, CA"
-    }
-  };
+importedData.vacancy = data;
+saveState();
+document.getElementById("vacancyStatus").textContent = `✓ Loaded ${Object.keys(data).length} metros`;
+document.getElementById("vacancyStatus").classList.add("loaded");
+updateDataStatus();
+refreshData();
 
-  return metroMap[neighborhood.name] || { zillow: neighborhood.name, apartment: neighborhood.name };
+} catch (err) {
+document.getElementById("vacancyStatus").textContent = "❌ Parse error";
+document.getElementById("vacancyStatus").classList.add("error");
+}
+};
+reader.readAsText(file);
 }
 
 function updateDataStatus() {
@@ -1021,10 +1069,8 @@ const mid = Math.floor(sorted.length / 2);
 return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-function getMetroData(neighborhood) {
-const metros = matchMetroToNeighborhood(neighborhood);
+function getConsolidatedMetroData(neighborhood) {
 const result = {
-metro: metros.apartment,
 currentRent: null,
 rentYoY: null,
 currentGrowth: null,
@@ -1033,9 +1079,9 @@ currentVacancy: null,
 vacancyYoY: null
 };
 
-// Get rent data
-if (importedData.zillow && metros.apartment && importedData.zillow[metros.apartment]) {
-const values = importedData.zillow[metros.apartment];
+// Get Zillow rent data
+if (importedData.zillow && neighborhood.zillowMetro && importedData.zillow[neighborhood.zillowMetro]) {
+const values = importedData.zillow[neighborhood.zillowMetro];
 if (Array.isArray(values) && values.length > 0) {
 result.currentRent = values[values.length - 1];
 if (values.length >= 24) {
@@ -1046,9 +1092,9 @@ result.rentYoY = { current: calculateMedian(current12), prior: calculateMedian(p
 }
 }
 
-// Get growth data
-if (importedData.apartment && metros.apartment && importedData.apartment[metros.apartment]) {
-const values = importedData.apartment[metros.apartment];
+// Get Apartment List Growth data
+if (importedData.apartment && neighborhood.apartmentMetro && importedData.apartment[neighborhood.apartmentMetro]) {
+const values = importedData.apartment[neighborhood.apartmentMetro];
 if (Array.isArray(values) && values.length > 0) {
 result.currentGrowth = values[values.length - 1];
 if (values.length >= 24) {
@@ -1059,9 +1105,9 @@ result.growthYoY = { current: calculateMedian(current12), prior: calculateMedian
 }
 }
 
-// Get vacancy data
-if (importedData.vacancy && metros.apartment && importedData.vacancy[metros.apartment]) {
-const values = importedData.vacancy[metros.apartment];
+// Get Vacancy data
+if (importedData.vacancy && neighborhood.apartmentMetro && importedData.vacancy[neighborhood.apartmentMetro]) {
+const values = importedData.vacancy[neighborhood.apartmentMetro];
 if (Array.isArray(values) && values.length > 0) {
 result.currentVacancy = values[values.length - 1];
 if (values.length >= 24) {
@@ -1075,91 +1121,410 @@ result.vacancyYoY = { current: calculateMedian(current12), prior: calculateMedia
 return result;
 }
 
-function refreshData() {
-const filtered = neighborhoods.filter(n => {
-const mok = currentMarket === "both" || n.market === currentMarket;
-const cok = n.capMin >= currentMinCap;
-return mok;
+function linearRegression(points) {
+if (points.length < 2) return null;
+
+const n = points.length;
+let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+for (let p of points) {
+sumX += p.x;
+sumY += p.y;
+sumXY += p.x * p.y;
+sumX2 += p.x * p.x;
+}
+
+const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+const b = (sumY - m * sumX) / n;
+
+return {m, b};
+}
+
+function forecastLinear(values, forecastMonths = 12) {
+if (values.length < 2) return null;
+
+const historical = values.slice(-60);
+const points = historical.map((val, idx) => ({x: idx, y: val}));
+const fit = linearRegression(points);
+if (!fit) return null;
+
+const forecast = [];
+for (let i = 0; i < forecastMonths; i++) {
+const x = historical.length + i;
+const y = fit.m * x + fit.b;
+forecast.push(Math.max(0, y));
+}
+
+return {
+historical: historical,
+forecast: forecast,
+fit: fit,
+all: [...historical, ...forecast]
+};
+}
+
+function renderChart(data, label, unit, width = 600, height = 200) {
+if (!data || !data.all || data.all.length === 0) return '';
+
+const padding = 50;
+const chartWidth = width - 2 * padding;
+const chartHeight = height - 2 * padding;
+
+const minVal = Math.min(...data.all);
+const maxVal = Math.max(...data.all);
+const range = maxVal - minVal || 1;
+const padding_val = range * 0.1;
+
+const yMin = Math.floor((minVal - padding_val) / 10) * 10;
+const yMax = Math.ceil((maxVal + padding_val) / 10) * 10;
+const yRange = yMax - yMin;
+
+const scaleX = (idx) => padding + (idx / (data.all.length - 1)) * chartWidth;
+const scaleY = (val) => height - padding - ((val - yMin) / yRange) * chartHeight;
+
+let historicalPath = '';
+for (let i = 0; i < data.historical.length; i++) {
+const x = scaleX(i);
+const y = scaleY(data.historical[i]);
+historicalPath += (i === 0 ? 'M' : 'L') + x + ',' + y;
+}
+
+let forecastPath = '';
+const splitIdx = data.historical.length;
+for (let i = 0; i < data.forecast.length; i++) {
+const x = scaleX(splitIdx + i);
+const y = scaleY(data.forecast[i]);
+forecastPath += (i === 0 ? 'M' : 'L') + x + ',' + y;
+}
+
+// Y-axis ticks and labels
+let yAxisLabels = '';
+const ySteps = 4;
+for (let i = 0; i <= ySteps; i++) {
+const yVal = yMin + (i / ySteps) * yRange;
+const yPos = height - padding - (i / ySteps) * chartHeight;
+yAxisLabels += '<line x1="' + (padding - 5) + '" y1="' + yPos + '" x2="' + padding + '" y2="' + yPos + '" class="chart-grid" />';
+yAxisLabels += '<text x="' + (padding - 12) + '" y="' + (yPos + 4) + '" class="chart-label" text-anchor="end">' + Math.round(yVal) + '</text>';
+}
+
+// X-axis ticks - show every 12th point (year) label
+let xAxisLabels = '';
+const step = Math.max(1, Math.floor(data.all.length / 6));
+// Assuming data ends in Sep 2026, calculate year for each month
+const endYear = 2026;
+const endMonth = 9; // September
+const totalMonths = data.all.length;
+for (let i = 0; i < data.all.length; i += step) {
+const xPos = scaleX(i);
+xAxisLabels += '<line x1="' + xPos + '" y1="' + (height - padding) + '" x2="' + xPos + '" y2="' + (height - padding + 5) + '" class="chart-grid" />';
+// Calculate year from index
+const monthsFromEnd = data.all.length - 1 - i;
+const monthsFromNow = monthsFromEnd;
+let year = endYear - Math.floor(monthsFromNow / 12);
+if (monthsFromNow % 12 > endMonth) year--;
+xAxisLabels += '<text x="' + xPos + '" y="' + (height - padding + 18) + '" class="chart-label" text-anchor="middle">' + year + '</text>';
+}
+
+// Data point circles on historical line
+let dataPoints = '';
+for (let i = 0; i < data.historical.length; i += Math.max(1, Math.floor(data.historical.length / 10))) {
+const x = scaleX(i);
+const y = scaleY(data.historical[i]);
+dataPoints += '<circle cx="' + x + '" cy="' + y + '" r="3" fill="var(--text-accent)" opacity="0.6" />';
+dataPoints += '<text x="' + x + '" y="' + (y - 8) + '" class="chart-label" text-anchor="middle" font-size="9">' + Math.round(data.historical[i]) + '</text>';
+}
+
+// Data point circles on forecast line
+for (let i = 0; i < data.forecast.length; i += Math.max(1, Math.floor(data.forecast.length / 3))) {
+const x = scaleX(splitIdx + i);
+const y = scaleY(data.forecast[i]);
+dataPoints += '<circle cx="' + x + '" cy="' + y + '" r="3" fill="var(--text-warning)" opacity="0.6" />';
+dataPoints += '<text x="' + x + '" y="' + (y - 8) + '" class="chart-label" text-anchor="middle" font-size="9">' + Math.round(data.forecast[i]) + '</text>';
+}
+
+let svg = `<svg width="${width}" height="${height}" style="display: block; margin: 0 auto;">
+<style>
+.chart-line { fill: none; stroke-width: 2; }
+.chart-hist { stroke: var(--text-accent); }
+.chart-forecast { stroke: var(--text-warning); stroke-dasharray: 4,2; }
+.chart-label { font-size: 10px; fill: var(--text-muted); }
+.chart-grid { stroke: var(--border); opacity: 0.3; }
+</style>
+<!-- Y Axis -->
+<line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="var(--border)" stroke-width="1" />
+<!-- X Axis -->
+<line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="var(--border)" stroke-width="1" />
+<!-- Y Axis Labels and Ticks -->
+${yAxisLabels}
+<!-- X Axis Labels and Ticks -->
+${xAxisLabels}
+<!-- Grid Lines -->
+<line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="chart-grid" />
+<!-- Historical Line -->
+<path d="${historicalPath}" class="chart-line chart-hist" />
+<!-- Forecast Line -->
+<path d="${forecastPath}" class="chart-line chart-forecast" />
+<!-- Data Points -->
+${dataPoints}
+<!-- Labels -->
+<text x="${padding}" y="14" class="chart-label" font-weight="600">${label}</text>
+<text x="${width - padding - 20}" y="14" class="chart-label">${unit}</text>
+<!-- Legend -->
+<line x1="${padding}" y1="${height - 20}" x2="${padding + 20}" y2="${height - 20}" class="chart-hist" stroke-width="2" />
+<text x="${padding + 25}" y="${height - 15}" class="chart-label" font-size="9">Historical</text>
+<line x1="${padding + 100}" y1="${height - 20}" x2="${padding + 120}" y2="${height - 20}" class="chart-forecast" stroke-width="2" stroke-dasharray="4,2" />
+<text x="${padding + 125}" y="${height - 15}" class="chart-label" font-size="9">Forecast</text>
+</svg>`;
+
+return svg;
+}
+
+function getMetroChartData(neighborhood) {
+const data = {};
+
+if (importedData.zillow && neighborhood.zillowMetro && importedData.zillow[neighborhood.zillowMetro]) {
+const values = importedData.zillow[neighborhood.zillowMetro];
+if (Array.isArray(values)) {
+data.rent = forecastLinear(values, 12);
+}
+}
+
+if (importedData.apartment && neighborhood.apartmentMetro && importedData.apartment[neighborhood.apartmentMetro]) {
+const values = importedData.apartment[neighborhood.apartmentMetro];
+if (Array.isArray(values)) {
+data.growth = forecastLinear(values, 12);
+}
+}
+
+if (importedData.vacancy && neighborhood.apartmentMetro && importedData.vacancy[neighborhood.apartmentMetro]) {
+const values = importedData.vacancy[neighborhood.apartmentMetro];
+if (Array.isArray(values)) {
+data.vacancy = forecastLinear(values, 12);
+}
+}
+
+return data;
+}
+
+function getNewMetrosFromData() {
+const matchedMetros = new Set();
+neighborhoods.forEach(n => {
+matchedMetros.add(n.zillowMetro);
+matchedMetros.add(n.apartmentMetro);
 });
 
-if (currentView === "detail") {
-const html = `<div class="neighborhoods">${filtered.map(n => {
-const metroData = getMetroData(n);
-const hasData = metroData.currentRent || metroData.currentGrowth || metroData.currentVacancy;
+const allMetros = new Set();
+if (importedData.zillow) Object.keys(importedData.zillow).forEach(m => allMetros.add(m));
+if (importedData.apartment) Object.keys(importedData.apartment).forEach(m => allMetros.add(m));
+if (importedData.vacancy) Object.keys(importedData.vacancy).forEach(m => allMetros.add(m));
+
+const minRent = investmentFundamentals.minRent;
+const maxRent = investmentFundamentals.maxRent;
+const maxVacancy = investmentFundamentals.maxVacancy;
+const minGrowth = investmentFundamentals.minGrowth;
+
+const qualifyingMetros = [];
+allMetros.forEach(metro => {
+if (matchedMetros.has(metro)) return;
+const data = getNewMetroData(metro);
+
+// MANDATORY: Growth data must exist
+const growthPass = data.growth !== null && data.growth >= minGrowth;
+if (!growthPass) return;
+
+// OPTIONAL: Rent within band (if data exists)
+const rentPass = data.rent === null || (data.rent >= minRent && data.rent <= maxRent);
+
+// OPTIONAL: Vacancy below threshold (if data exists)
+const vacancyPass = data.vacancy === null || data.vacancy <= maxVacancy;
+
+// Qualify if growth passes AND (rent passes OR rent is missing) AND (vacancy passes OR vacancy is missing)
+if (growthPass && rentPass && vacancyPass) {
+qualifyingMetros.push(metro);
+}
+});
+
+return qualifyingMetros;
+}
+
+function getNewMetroData(metroName) {
+// Fetch data for a new metro across all 3 sources
+const data = {
+metro: metroName,
+rent: null,
+rentYoY: null,
+growth: null,
+growthYoY: null,
+vacancy: null,
+vacancyYoY: null
+};
+
+// Zillow rent
+if (importedData.zillow && importedData.zillow[metroName]) {
+const values = importedData.zillow[metroName];
+if (Array.isArray(values) && values.length > 0) {
+data.rent = values[values.length - 1];
+if (values.length >= 24) {
+const current12 = values.slice(-12);
+const prior12 = values.slice(-24, -12);
+data.rentYoY = { current: calculateMedian(current12), prior: calculateMedian(prior12) };
+}
+}
+}
+
+// Apartment List Growth
+if (importedData.apartment && importedData.apartment[metroName]) {
+const values = importedData.apartment[metroName];
+if (Array.isArray(values) && values.length > 0) {
+data.growth = values[values.length - 1];
+if (values.length >= 24) {
+const current12 = values.slice(-12);
+const prior12 = values.slice(-24, -12);
+data.growthYoY = { current: calculateMedian(current12), prior: calculateMedian(prior12) };
+}
+}
+}
+
+// Vacancy
+if (importedData.vacancy && importedData.vacancy[metroName]) {
+const values = importedData.vacancy[metroName];
+if (Array.isArray(values) && values.length > 0) {
+data.vacancy = values[values.length - 1];
+if (values.length >= 24) {
+const current12 = values.slice(-12);
+const prior12 = values.slice(-24, -12);
+data.vacancyYoY = { current: calculateMedian(current12), prior: calculateMedian(prior12) };
+}
+}
+}
+
+return data;
+}
+
+function buildNewMetroCard(metroName) {
+const data = getNewMetroData(metroName);
+const rentYoY = data.rentYoY ? ((data.rentYoY.current - data.rentYoY.prior) / data.rentYoY.prior * 100).toFixed(1) : "—";
+const growthYoY = data.growthYoY ? (data.growthYoY.current - data.growthYoY.prior).toFixed(1) : "—";
+const vacancyYoY = data.vacancyYoY ? (data.vacancyYoY.current - data.vacancyYoY.prior).toFixed(1) : "—";
+
+const rentArrow = rentYoY >= 0 && rentYoY !== "—" ? '↑' : '↓';
+const growthArrow = growthYoY >= 0 && growthYoY !== "—" ? '↑' : '↓';
+const vacancyArrow = vacancyYoY <= 0 && vacancyYoY !== "—" ? '↑' : '↓';
 
 return `
-<div class="neighborhood-card" oncontextmenu="openChatForNeighborhood(event, '${n.name.replace(/'/g, "\\'")}')">
+<div class="neighborhood-card" style="border: 1.5px solid #68d391; background: linear-gradient(135deg, var(--surface-2) 0%, rgba(104, 211, 145, 0.08) 100%); position: relative;">
+
+<div style="position: absolute; top: 8px; right: 8px; background: #68d391; color: #0f1419; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">🚀 NEW MARKET</div>
 
 <div class="neighborhood-header">
-<div class="neighborhood-name">${n.name}</div>
-<div class="tier-badge">Tier ${n.tier}</div>
+<div class="neighborhood-name" style="margin-top: 8px;">${metroName}</div>
 </div>
 
 <div class="metrics-grid">
 <div class="metric">
-<div class="metric-label">Cap</div>
-<div class="metric-value">${n.capMin}–${n.capMax}%</div>
-</div>
-<div class="metric">
 <div class="metric-label">Rent</div>
-<div class="metric-value">${metroData.currentRent ? '$' + Math.round(metroData.currentRent).toLocaleString() : n.rent.split('/')[0]}</div>
+<div class="metric-value">${data.rent ? '$' + Math.round(data.rent).toLocaleString() + '/mo' : '—'}</div>
+<div style="font-size: 10px; color: var(--text-warning); margin-top: 2px;">${data.rent ? rentArrow + ' ' + Math.abs(rentYoY) + '% YoY' : ''}</div>
 </div>
 <div class="metric">
 <div class="metric-label">Growth</div>
-<div class="metric-value">${metroData.currentGrowth ? metroData.currentGrowth.toFixed(1) + '%' : n.rentGrowth}</div>
+<div class="metric-value">${data.growth ? data.growth.toFixed(2) + '%' : '—'}</div>
+<div style="font-size: 10px; color: var(--text-warning); margin-top: 2px;">${data.growth ? growthArrow + ' ' + Math.abs(growthYoY) + '%' : ''}</div>
 </div>
 <div class="metric">
 <div class="metric-label">Vacancy</div>
-<div class="metric-value">${metroData.currentVacancy ? metroData.currentVacancy.toFixed(1) + '%' : n.vacancy}</div>
+<div class="metric-value">${data.vacancy ? data.vacancy.toFixed(1) + '%' : '—'}</div>
+<div style="font-size: 10px; color: var(--text-warning); margin-top: 2px;">${data.vacancy ? vacancyArrow + ' ' + Math.abs(vacancyYoY) + '%' : ''}</div>
+</div>
+<div class="metric">
+<div class="metric-label">Data Points</div>
+<div class="metric-value">${[data.rent ? '💰' : '', data.growth ? '📈' : '', data.vacancy ? '📊' : ''].filter(x => x).join('')}</div>
 </div>
 </div>
 
-${hasData ? `<div class="metro-source">📍 <strong>Sources:</strong> ${metroData.metro}</div>` : ''}
-
-<button class="expand-btn" onclick="toggleExpanded(this)">+ Details →</button>
-
-<div class="expanded-content">
-<p><strong>Why invest:</strong> ${n.whyDetail}</p>
-<p><strong>Target:</strong> ${n.target}</p>
-<p><strong>Tradeoff:</strong> ${n.tradeoff}</p>
-<div style="font-size: 10px; color: var(--text-muted); margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border);">
-<strong>Sources:</strong> ${n.sources.join(', ')}
+<div style="background: rgba(104, 211, 145, 0.1); padding: 8px; border-radius: 4px; border-left: 2px solid #68d391; margin-top: 8px;">
+<div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+<strong>Proactive recommendation:</strong> This metro appeared in your market data but wasn't in your original screening list. Consider adding to your criteria if it matches your investment thesis.
 </div>
 </div>
 
 </div>
 `;
-}).join('')}</div>
-`;
+}
+
+function refreshData() {
+const filtered = neighborhoods.filter(n => {
+const mok = currentMarket === "both" || n.market === currentMarket;
+return mok;
+}).sort((a, b) => a.tier - b.tier);
+
+if (currentView === "detail") {
+const newMetros = getNewMetrosFromData();
+let html = '<div class="neighborhoods"><div style="background: linear-gradient(135deg, rgba(99, 179, 237, 0.1) 0%, rgba(99, 179, 237, 0.05) 100%); padding: 16px; border-radius: 8px; border-left: 3px solid var(--text-accent); margin-bottom: 16px;"><div style="font-size: 12px; font-weight: 600; color: var(--text-accent); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Your Investment Fundamentals (Editable)</div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;"><div><span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Min Rent: <strong>$' + investmentFundamentals.minRent.toLocaleString() + '</strong></span><input type="range" id="minRentInput" min="1000" max="2000" step="25" value="' + investmentFundamentals.minRent + '" onchange="updateFundamentals()" style="width: 100%; cursor: pointer;"></div><div><span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Max Rent: <strong>$' + investmentFundamentals.maxRent.toLocaleString() + '</strong></span><input type="range" id="maxRentInput" min="1000" max="2000" step="25" value="' + investmentFundamentals.maxRent + '" onchange="updateFundamentals()" style="width: 100%; cursor: pointer;"></div><div><span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Max Vacancy: <strong>' + investmentFundamentals.maxVacancy.toFixed(1) + '%</strong></span><input type="range" id="maxVacancyInput" min="2" max="10" step="0.5" value="' + investmentFundamentals.maxVacancy + '" onchange="updateFundamentals()" style="width: 100%; cursor: pointer;"></div><div><span style="color: var(--text-secondary); display: block; margin-bottom: 4px;">Min Growth: <strong>' + investmentFundamentals.minGrowth.toFixed(1) + '%</strong></span><input type="range" id="minGrowthInput" min="0" max="5" step="0.25" value="' + investmentFundamentals.minGrowth + '" onchange="updateFundamentals()" style="width: 100%; cursor: pointer;"></div></div><div style="margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-muted);">Adjust sliders to filter new market recommendations: Rent in band + Vacancy ≤ threshold + Growth ≥ threshold</div></div>';
+
+// Add new market recommendations last (if any)
+html += filtered.map(n => {
+const metroData = getConsolidatedMetroData(n);
+const rentDisplay = metroData.currentRent ? '$' + Math.round(metroData.currentRent).toLocaleString() + '/mo (Current)' : n.rent;
+const growthDisplay = metroData.currentGrowth ? metroData.currentGrowth.toFixed(2) + '% (Current)' : n.rentGrowth;
+const vacancyDisplay = metroData.currentVacancy ? metroData.currentVacancy.toFixed(1) + '%' : n.vacancy;
+
+return '<div class="neighborhood-card"><div class="neighborhood-header"><div class="neighborhood-name">' + n.name + '</div><div class="tier-badge">Tier ' + n.tier + '</div></div><div class="metrics-grid"><div class="metric"><div class="metric-label">Cap</div><div class="metric-value">' + n.capMin + '–' + n.capMax + '%</div></div><div class="metric"><div class="metric-label">Rent</div><div class="metric-value">' + rentDisplay + '</div></div><div class="metric"><div class="metric-label">Growth</div><div class="metric-value">' + growthDisplay + '</div></div><div class="metric"><div class="metric-label">Vacancy</div><div class="metric-value">' + vacancyDisplay + '</div></div></div><div style="background: var(--surface-1); padding: 8px; border-radius: 4px; margin-bottom: 8px; border-left: 2px solid var(--border-accent);"><div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;"><strong>OpEx Ratio</strong></div><div style="font-size: 13px; font-weight: 500; color: var(--text-accent); margin-bottom: 4px;">' + (n.opexRatio * 100).toFixed(0) + '%</div><div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">' + n.opexNotes + '</div></div><button class="expand-btn" onclick="this.nextElementSibling.classList.toggle(\'active\'); this.textContent = this.nextElementSibling.classList.contains(\'active\') ? \'- Market Detail\' : \'+ Market Detail\'">+ Market Detail</button><div class="expanded-content"><p><strong>Why:</strong> ' + n.whyDetail + '</p><p><strong>Reasoning:</strong> ' + n.reasoning + '</p><p><strong>Target deal:</strong> ' + n.target + '</p><p style="color: var(--text-warning);"><strong>Tradeoff:</strong> ' + n.tradeoff + '</p></div><div class="metro-source" style="margin-top: 12px;">📍 <strong>Zillow metro:</strong> ' + n.zillowMetro + '<br>📍 <strong>Apartment List metro:</strong> ' + n.apartmentMetro + '</div></div>';
+}).join('');
+
+// Add new market recommendations at the end (if any)
+if (newMetros.length > 0) {
+html += '<div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;">📍 Qualifying New Markets</div>';
+html += newMetros.map(metro => buildNewMetroCard(metro)).join('');
+}
+
+html += '</div>';
 document.getElementById("detail").innerHTML = html;
 document.getElementById("detail").style.flexDirection = "column";
+document.getElementById("detail").style.gap = "16px";
 } else if (currentView === "compare") {
-let html = `<table class="comparison-table"><thead><tr><th>Neighborhood</th><th>Tier</th><th>Cap</th><th>Rent (mo)</th><th>Rent YoY</th><th>Growth</th><th>Growth YoY</th><th>Vacancy</th><th>Vacancy YoY</th></tr></thead><tbody>`;
+let html = `<table class="comparison-table"><thead><tr><th></th><th>Neighborhood</th><th>Tier</th><th>Cap</th><th>Rent</th><th>Growth</th><th>Vacancy</th><th>OpEx</th><th>Charts</th></tr></thead><tbody>`;
 
-filtered.forEach(n => {
-const metroData = getMetroData(n);
-const rentCurrent = metroData.currentRent || 0;
-const rentYoY = metroData.rentYoY ? ((metroData.rentYoY.current - metroData.rentYoY.prior) / metroData.rentYoY.prior * 100) : 0;
-const growthCurrent = metroData.currentGrowth || 0;
-const growthYoY = metroData.growthYoY ? (metroData.growthYoY.current - metroData.growthYoY.prior) : 0;
-const vacancyCurrent = metroData.currentVacancy || 0;
-const vacancyYoY = metroData.vacancyYoY ? (metroData.vacancyYoY.current - metroData.vacancyYoY.prior) : 0;
+filtered.forEach((n, idx) => {
+const metroData = getConsolidatedMetroData(n);
+const rentCurrent = metroData.currentRent ? `$${Math.round(metroData.currentRent)}` : n.rent;
+const growthCurrent = metroData.currentGrowth ? `${metroData.currentGrowth.toFixed(2)}%` : n.rentGrowth;
+const vacancyCurrent = metroData.currentVacancy ? `${metroData.currentVacancy.toFixed(1)}%` : n.vacancy;
 
-const rentArrow = rentYoY >= 0 ? '↑' : '↓';
-const growthArrow = growthYoY >= 0 ? '↑' : '↓';
-const vacancyArrow = vacancyYoY >= 0 ? '↑' : '↓';
+const rentYoY = metroData.rentYoY ? ((metroData.rentYoY.current - metroData.rentYoY.prior) / metroData.rentYoY.prior * 100).toFixed(1) : "—";
+const growthYoY = metroData.growthYoY ? (metroData.growthYoY.current - metroData.growthYoY.prior).toFixed(1) : "—";
+const vacancyYoY = metroData.vacancyYoY ? (metroData.vacancyYoY.current - metroData.vacancyYoY.prior).toFixed(1) : "—";
 
-html += `<tr>
-<td>${n.name}</td>
+const rentArrow = rentYoY >= 0 && rentYoY !== "—" ? '↑' : '↓';
+const growthArrow = growthYoY >= 0 && growthYoY !== "—" ? '↑' : '↓';
+const vacancyArrow = vacancyYoY <= 0 && vacancyYoY !== "—" ? '↑' : '↓';
+
+html += `<tr onclick="toggleChartRow(${idx})">
+<td style="text-align: center; color: var(--text-secondary); cursor: pointer;">▶</td>
+<td><strong>${n.name}</strong></td>
 <td>${n.tier}</td>
 <td>${n.capMin}–${n.capMax}%</td>
-<td>$${Math.round(rentCurrent).toLocaleString()}</td>
-<td><span style="color: ${rentYoY >= 0 ? 'var(--text-success)' : 'var(--text-warning)'}">${rentArrow} ${Math.abs(rentYoY).toFixed(1)}%</span></td>
-<td>${growthCurrent.toFixed(1)}%</td>
-<td><span style="color: ${growthYoY >= 0 ? 'var(--text-success)' : 'var(--text-warning)'}">${growthArrow} ${Math.abs(growthYoY).toFixed(1)}%</span></td>
-<td>${vacancyCurrent.toFixed(1)}%</td>
-<td><span style="color: ${vacancyYoY >= 0 ? 'var(--text-warning)' : 'var(--text-success)'}">${vacancyArrow} ${Math.abs(vacancyYoY).toFixed(1)}%</span></td>
+<td>${rentCurrent} <span style="color: var(--text-warning); font-size: 10px;">${rentArrow} ${Math.abs(rentYoY)}%</span></td>
+<td>${growthCurrent} <span style="color: var(--text-warning); font-size: 10px;">${growthArrow} ${Math.abs(growthYoY)}%</span></td>
+<td>${vacancyCurrent} <span style="color: var(--text-warning); font-size: 10px;">${vacancyArrow} ${Math.abs(vacancyYoY)}%</span></td>
+<td>${(n.opexRatio * 100).toFixed(0)}%</td>
+<td style="text-align: center; color: var(--text-accent); font-size: 10px;">click</td>
 </tr>`;
+
+const chartData = getMetroChartData(n);
+html += `<tr class="chart-row chart-row-${idx}"><td colspan="9" style="padding: 24px; background: var(--surface-1);">
+<div style="display: flex; flex-direction: column; gap: 32px;">
+<div><div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px;">📊 Rent Trend (60mo historical + 12mo forecast)</div>
+${chartData.rent ? renderChart(chartData.rent, 'Rent', '$/mo', 900, 250) : '<div style="color: var(--text-muted); font-size: 11px;">No data</div>'}
+</div>
+<div><div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px;">📈 Growth Trend (60mo historical + 12mo forecast)</div>
+${chartData.growth ? renderChart(chartData.growth, 'Growth', '%', 900, 250) : '<div style="color: var(--text-muted); font-size: 11px;">No data</div>'}
+</div>
+<div><div style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px;">📉 Vacancy Trend (60mo historical + 12mo forecast)</div>
+${chartData.vacancy ? renderChart(chartData.vacancy, 'Vacancy', '%', 900, 250) : '<div style="color: var(--text-muted); font-size: 11px;">No data</div>'}
+</div>
+</div>
+</td></tr>`;
 });
 
 html += `</tbody></table>`;
@@ -1167,9 +1532,16 @@ document.getElementById("compare").innerHTML = html;
 }
 }
 
-function toggleExpanded(btn) {
-btn.parentElement.querySelector(".expanded-content").classList.toggle("active");
-btn.textContent = btn.parentElement.querySelector(".expanded-content").classList.contains("active") ? "- Details ↓" : "+ Details →";
+function toggleChartRow(idx) {
+const row = document.querySelector(`.chart-row-${idx}`);
+if (row) {
+row.classList.toggle("active");
+}
+}
+
+function toggleExpand(id) {
+const el = document.getElementById(id);
+if (el) el.classList.toggle("active");
 }
 
 function saveState() {
@@ -1181,7 +1553,8 @@ cr: document.getElementById("cr").value,
 loanRate: document.getElementById("loanRate").value,
 loanTerm: document.getElementById("loanTerm").value,
 market: currentMarket,
-importedData: importedData
+importedData: importedData,
+fundamentals: investmentFundamentals
 }));
 }
 
@@ -1203,36 +1576,12 @@ if (state.importedData) {
 importedData = state.importedData;
 updateDataStatus();
 }
+if (state.fundamentals) {
+investmentFundamentals = state.fundamentals;
 }
 }
-
-function openChatForNeighborhood(event, neighborhood) {
-event.preventDefault();
-currentContextNeighborhood = neighborhood;
-document.getElementById("chatSidebar").style.display = "flex";
-document.getElementById("contextInfo").textContent = `Asking about ${neighborhood}`;
-document.getElementById("chatInput").focus();
 }
 
-function closeChatSidebar() {
-document.getElementById("chatSidebar").style.display = "none";
-currentContextNeighborhood = null;
-}
-
-function sendChatMessage() {
-const message = document.getElementById("chatInput").value;
-if (!message) return;
-
-const messagesDiv = document.getElementById("chatMessages");
-messagesDiv.innerHTML += `<div style="text-align: right; font-size: 12px; color: var(--text-accent); margin-bottom: 8px;">${message}</div>`;
-document.getElementById("chatInput").value = "";
-
-// Placeholder for Claude integration
-messagesDiv.innerHTML += `<div style="text-align: left; font-size: 12px; color: var(--text-secondary); background: var(--surface-1); padding: 8px; border-radius: 4px;">Claude would respond here with analysis of ${currentContextNeighborhood}</div>`;
-messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-// Initialize
 window.addEventListener('load', () => {
 loadState();
 updateCalcs();
@@ -1245,7 +1594,108 @@ document.getElementById("reno").addEventListener("input", updateCalcs);
 document.getElementById("cr").addEventListener("input", updateCalcs);
 document.getElementById("loanRate").addEventListener("input", updateCalcs);
 document.getElementById("loanTerm").addEventListener("input", updateCalcs);
+addRightClickHandlers();
 });
+
+// CLAUDE SIDEBAR FUNCTIONS
+let contextData = null;
+
+function getNeighborhoodContext(neighborhoodName) {
+const n = neighborhoods.find(nb => nb.name === neighborhoodName);
+if (!n) return null;
+
+const metroData = getConsolidatedMetroData(n);
+return {
+name: n.name,
+tier: n.tier,
+market: n.market,
+capRange: n.capMin + '–' + n.capMax + '%',
+rent: metroData.currentRent ? '$' + Math.round(metroData.currentRent) + '/mo' : n.rent,
+rentGrowth: metroData.currentGrowth ? metroData.currentGrowth.toFixed(2) + '%' : n.rentGrowth,
+vacancy: metroData.currentVacancy ? metroData.currentVacancy.toFixed(1) + '%' : n.vacancy,
+opexRatio: (n.opexRatio * 100).toFixed(0) + '%',
+why: n.whyDetail,
+reasoning: n.reasoning,
+target: n.target,
+tradeoff: n.tradeoff,
+zillowMetro: n.zillowMetro,
+apartmentMetro: n.apartmentMetro
+};
+}
+
+function openSidebar(neighborhoodName) {
+const context = getNeighborhoodContext(neighborhoodName);
+if (!context) return;
+
+contextData = context;
+
+let html = '<strong>' + context.name + '</strong><p style="margin-top: 8px; margin-bottom: 8px; color: var(--text-muted); font-size: 11px;">Tier ' + context.tier + ' • ' + context.market + ' Market</p>';
+
+html += '<p><strong>Cap Rate:</strong> ' + context.capRange + '</p>';
+html += '<p><strong>Rent:</strong> ' + context.rent + ' (Growth: ' + context.rentGrowth + ')</p>';
+html += '<p><strong>Vacancy:</strong> ' + context.vacancy + '</p>';
+html += '<p><strong>OpEx Ratio:</strong> ' + context.opexRatio + '</p>';
+
+html += '<p style="margin-top: 12px; border-top: 0.5px solid var(--border); padding-top: 8px;"><strong>Why:</strong> ' + context.why + '</p>';
+html += '<p><strong>Reasoning:</strong> ' + context.reasoning + '</p>';
+html += '<p><strong>Target Deal:</strong> ' + context.target + '</p>';
+html += '<p style="color: var(--text-warning);"><strong>Tradeoff:</strong> ' + context.tradeoff + '</p>';
+
+html += '<p style="margin-top: 12px; font-size: 11px; color: var(--text-muted); padding-top: 8px; border-top: 0.5px solid var(--border);">📍 <strong>Zillow:</strong> ' + context.zillowMetro + '<br>📍 <strong>Apartment List:</strong> ' + context.apartmentMetro + '</p>';
+
+document.getElementById('sidebarContent').innerHTML = html;
+document.getElementById('claudeSidebar').classList.add('open');
+}
+
+function closeSidebar() {
+document.getElementById('claudeSidebar').classList.remove('open');
+contextData = null;
+}
+
+function sendToChat() {
+if (!contextData) return;
+
+const message = 'I\'m analyzing the ' + contextData.name + ' neighborhood for a multifamily investment:\n\n' +
+'**Neighborhood:** ' + contextData.name + ' (Tier ' + contextData.tier + ', ' + contextData.market + ' market)\n' +
+'**Cap Rate Range:** ' + contextData.capRange + '\n' +
+'**Current Rent:** ' + contextData.rent + ' (Growth: ' + contextData.rentGrowth + ')\n' +
+'**Vacancy Rate:** ' + contextData.vacancy + '\n' +
+'**OpEx Ratio:** ' + contextData.opexRatio + '\n\n' +
+'**Investment thesis:** ' + contextData.why + '\n\n' +
+'**Reasoning:** ' + contextData.reasoning + '\n\n' +
+'**Target deal:** ' + contextData.target + '\n\n' +
+'**Tradeoff:** ' + contextData.tradeoff + '\n\n' +
+'What questions should I ask about this market? How does this fit my investment thesis?';
+
+// Copy to clipboard
+navigator.clipboard.writeText(message).then(() => {
+alert('Context copied to clipboard! Paste it into the Claude chat.');
+closeSidebar();
+}).catch(err => {
+console.error('Failed to copy:', err);
+});
+}
+
+// Add right-click handler to Detail tab
+function addRightClickHandlers() {
+const cards = document.querySelectorAll('.neighborhood-card');
+cards.forEach(card => {
+card.addEventListener('contextmenu', (e) => {
+e.preventDefault();
+const nameEl = card.querySelector('.neighborhood-name');
+if (nameEl) {
+openSidebar(nameEl.textContent.trim());
+}
+});
+});
+}
+
+// Override refreshData to add right-click handlers after rendering
+const originalRefreshData = refreshData;
+refreshData = function() {
+originalRefreshData.call(this);
+addRightClickHandlers();
+}
 
 </script>
 
